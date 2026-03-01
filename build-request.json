@@ -1,0 +1,58 @@
+{
+  "kind": "build_request",
+  "title": "Fix branding to 'Creative Prints and Design' and restore logo",
+  "projectName": "Creative Prints and Design",
+  "priority": "normal",
+  "requirements": [
+    {
+      "id": "REQ-1",
+      "text": "Update all instances of the app name displayed in the UI (header, page title, footer, any branding text) from 'cp&d' or any abbreviation to 'Creative Prints and Design'.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-recent"
+        ],
+        "quotes": [
+          "The name is \"Creative Prints and Design\""
+        ]
+      },
+      "acceptanceCriteria": [
+        "The header/navbar displays 'Creative Prints and Design' as the app name",
+        "The HTML page title (index.html) reads 'Creative Prints and Design'",
+        "No instance of 'cp&d' or abbreviated branding appears anywhere in the UI"
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "text": "Replace the current logo in the app header/navbar with the uploaded logo image (creative-prints-logo.dim_256x256.png) stored in frontend/public/assets/generated/.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-recent"
+        ],
+        "quotes": [
+          "The name is \"Creative Prints and Design\""
+        ]
+      },
+      "acceptanceCriteria": [
+        "The header displays the circular 3D-printer logo from the uploaded image",
+        "The logo renders cleanly at standard navbar height without distortion",
+        "The logo links to the home page"
+      ]
+    }
+  ],
+  "constraints": [
+    "Do not alter backend data models or admin logic",
+    "Do not modify files under frontend/src/hooks/ (immutable paths)"
+  ],
+  "nonGoals": [
+    "Admin access flow changes are out of scope for this request",
+    "Redesigning the overall color scheme or layout"
+  ],
+  "imageRequirements": {
+    "required": [
+      "Circular logo featuring a dark navy blue 3D printer inside a circle with a teardrop/filament drip element, overlaid with bold white text reading 'Creative Prints' in two lines, clean white background (creative-prints-logo.dim_256x256.png)"
+    ],
+    "edits": []
+  }
+}

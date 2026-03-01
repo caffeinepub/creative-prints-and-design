@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectStateVersion": 3,
+  "summary": "Project for 'Creative Prints and Design' - a print and design platform with admin access functionality.",
+  "architectural_notes": [],
+  "known_issues": [
+    "Logo/branding was incorrectly changed to 'cp&d' instead of 'Creative Prints and Design'",
+    "Admin access flow is missing or not easily discoverable"
+  ],
+  "isFixRequest": true,
+  "imageRequirements": "## Required Images\n- Circular logo featuring a dark navy blue 3D printer inside a circle with a teardrop/filament drip element, overlaid with bold white text reading 'Creative Prints' in two lines, clean white background (creative-prints-logo.dim_256x256.png)",
+  "existing_features": [
+    {
+      "id": "feature-update-all-instances-of-the-app-name-displayed-in-the-ui-header-page-title-footer-any-branding-text-from-cp-d-or-any-abbreviation-to-creative-prints-and-design",
+      "title": "Update all instances of the app name displayed in the UI (header, page title, footer, any branding text) from 'cp&d' or any abbreviation to 'Creative Prints and Design'.",
+      "reqIds": [
+        "REQ-1"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-replace-the-current-logo-in-the-app-header-navbar-with-the-uploaded-logo-image-creative-prints-logo-dim-256x256-png-stored-in-frontend-public-assets-generated",
+      "title": "Replace the current logo in the app header/navbar with the uploaded logo image (creative-prints-logo.dim_256x256.png) stored in frontend/public/assets/generated/.",
+      "reqIds": [
+        "REQ-2"
+      ],
+      "version": 1
+    }
+  ],
+  "new_feature_requests": [
+    {
+      "id": "AR-1",
+      "summary": "Fix branding: app name should display 'Creative Prints and Design' (not 'cp&d')",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-2",
+      "summary": "Fix or implement admin access flow so admins can log in/access admin panel",
+      "reqIds": [],
+      "status": "pending"
+    }
+  ],
+  "gameProjectType": "none",
+  "projectName": "Creative Prints and Design",
+  "clarification_mode": "instant",
+  "clarification_rounds": 0
+}

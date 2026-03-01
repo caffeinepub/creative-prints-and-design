@@ -1,0 +1,49 @@
+{
+  "kind": "feature_evidence_report",
+  "features": [
+    {
+      "featureId": "feature-update-all-instances-of-the-app-name-displayed-in-the-ui-header-page-title-footer-any-branding-text-from-cp-d-or-any-abbreviation-to-creative-prints-and-design",
+      "featureTitle": "Update all instances of the app name displayed in the UI (header, page title, footer, any branding text) from 'cp&d' or any abbreviation to 'Creative Prints and Design'.",
+      "files": [
+        "frontend/src/components/Layout.tsx"
+      ],
+      "components": [
+        "blob-storage@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "qr-code@1.0.0",
+        "camera@1.0.0",
+        "authorization@4.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-1"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-replace-the-current-logo-in-the-app-header-navbar-with-the-uploaded-logo-image-creative-prints-logo-dim-256x256-png-stored-in-frontend-public-assets-generated",
+      "featureTitle": "Replace the current logo in the app header/navbar with the uploaded logo image (creative-prints-logo.dim_256x256.png) stored in frontend/public/assets/generated/.",
+      "files": [
+        "frontend/src/components/Layout.tsx"
+      ],
+      "components": [
+        "blob-storage@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "qr-code@1.0.0",
+        "camera@1.0.0",
+        "authorization@4.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-2"
+      ],
+      "confidence": "high"
+    }
+  ]
+}

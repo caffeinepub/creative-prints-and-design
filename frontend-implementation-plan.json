@@ -1,0 +1,49 @@
+{
+  "kind": "implementation_plan",
+  "version": "1.0",
+  "title": "Fix branding to 'Creative Prints and Design' and restore logo",
+  "requirements": [
+    {
+      "id": "REQ-1",
+      "summary": "Update all UI text from 'cp&d' or abbreviations to 'Creative Prints and Design'",
+      "acceptanceCriteria": [
+        "The header/navbar displays 'Creative Prints and Design' as the app name",
+        "The HTML page title (index.html) reads 'Creative Prints and Design'",
+        "No instance of 'cp&d' or abbreviated branding appears anywhere in the UI"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/index.html",
+          "operation": "modify",
+          "description": "Update the <title> tag from its current value to 'Creative Prints and Design' to reflect the full brand name in the browser tab."
+        },
+        {
+          "path": "frontend/src/components/Layout.tsx",
+          "operation": "modify",
+          "description": "Replace any abbreviated branding text (e.g., 'cp&d') in the header navigation with 'Creative Prints and Design'. Ensure the brand text next to the logo reads the full name."
+        },
+        {
+          "path": "frontend/src/pages/HomePage.tsx",
+          "operation": "modify",
+          "description": "Review and update any branding text in the hero section or features grid to use 'Creative Prints and Design' instead of abbreviations."
+        }
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "summary": "Replace header logo with the uploaded circular 3D-printer logo image",
+      "acceptanceCriteria": [
+        "The header displays the circular 3D-printer logo from the uploaded image",
+        "The logo renders cleanly at standard navbar height without distortion",
+        "The logo links to the home page"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/Layout.tsx",
+          "operation": "modify",
+          "description": "Update the header logo to use the generated image at frontend/public/assets/generated/creative-prints-logo.dim_256x256.png (as provided in the uploaded asset). Ensure the logo is wrapped in a link to the home page ('/'), has appropriate alt text ('Creative Prints and Design logo'), and is styled to fit the navbar height (e.g., h-10 or h-12) without distortion using object-fit."
+        }
+      ]
+    }
+  ]
+}
