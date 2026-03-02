@@ -14,9 +14,24 @@ export class ExternalBlob {
     static fromBytes(blob: Uint8Array<ArrayBuffer>): ExternalBlob;
     withUploadProgress(onProgress: (percentage: number) => void): ExternalBlob;
 }
+export interface Product {
+    id: string;
+    name: string;
+    description: string;
+    image: ExternalBlob;
+    price: bigint;
+}
+export interface PaymentConfirmation {
+    id: string;
+    customerName: string;
+    proofFile: ExternalBlob;
+    orderId: string;
+    timestamp: bigint;
+}
 export interface StoreOrder {
     id: string;
     customerName: string;
+    status: string;
     productId: string;
     productName: string;
     email: string;
@@ -29,6 +44,7 @@ export interface StoreOrder {
 export interface UnifiedOrder {
     id: string;
     customerName: string;
+    status?: string;
     description: string;
     productId?: string;
     productName?: string;
@@ -40,20 +56,6 @@ export interface UnifiedOrder {
     phone?: string;
     productPrice?: bigint;
     productDescription?: string;
-}
-export type RoleAssignmentResult = {
-    __kind__: "alreadyAssigned";
-    alreadyAssigned: null;
-} | {
-    __kind__: "success";
-    success: UserRole;
-};
-export interface PaymentConfirmation {
-    id: string;
-    customerName: string;
-    proofFile: ExternalBlob;
-    orderId: string;
-    timestamp: bigint;
 }
 export interface GalleryItem {
     id: string;
@@ -68,13 +70,6 @@ export interface CustomOrder {
     email?: string;
     modelFile?: ExternalBlob;
     phone?: string;
-}
-export interface Product {
-    id: string;
-    name: string;
-    description: string;
-    image: ExternalBlob;
-    price: bigint;
 }
 export interface UserProfile {
     name: string;
@@ -94,7 +89,6 @@ export interface backendInterface {
     addGalleryItem(id: string, title: string, description: string, image: ExternalBlob): Promise<void>;
     addProduct(id: string, name: string, description: string, price: bigint, image: ExternalBlob): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
-    completePasswordReset(email: string): Promise<void>;
     deleteGalleryItem(id: string): Promise<void>;
     deleteProduct(id: string): Promise<void>;
     getAllCustomOrders(): Promise<Array<CustomOrder>>;
@@ -109,16 +103,14 @@ export interface backendInterface {
     getPrincipalByEmail(email: string): Promise<Principal | null>;
     getProduct(id: string): Promise<Product>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
-    hasPendingPasswordReset(email: string): Promise<boolean>;
     isCallerAdmin(): Promise<boolean>;
-    registerUserProfile(email: string, name: string, isAdmin: boolean): Promise<void>;
-    requestPasswordReset(email: string): Promise<void>;
+    registerUserProfile(email: string, name: string): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
-    setRoleForCaller(role: UserRole): Promise<RoleAssignmentResult>;
     submitCustomOrder(id: string, name: string, email: string | null, phone: string | null, description: string, modelFile: ExternalBlob | null): Promise<void>;
     submitPaymentConfirmation(id: string, customerName: string, orderId: string, proofFile: ExternalBlob): Promise<void>;
     submitStoreOrder(id: string, customerName: string, email: string, phone: string, productId: string, productName: string, productDescription: string, productPrice: bigint, paymentProof: ExternalBlob | null): Promise<void>;
     updateGalleryItem(id: string, title: string, description: string, image: ExternalBlob): Promise<void>;
     updateProduct(id: string, name: string, description: string, price: bigint, image: ExternalBlob): Promise<void>;
+    updateStoreOrderStatus(id: string, status: string): Promise<void>;
     verifyAndEnsureAdminStatus(): Promise<boolean>;
 }

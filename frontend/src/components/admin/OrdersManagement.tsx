@@ -1,299 +1,229 @@
-import { useState, useMemo } from 'react';
-import { useGetAllUnifiedOrders } from '../../hooks/useQueries';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import React, { useState } from 'react';
+import { Package, Clock, Truck, CheckCircle, XCircle, RefreshCw, Filter, ChevronDown } from 'lucide-react';
+import { toast } from 'sonner';
+import { useGetAllStoreOrders, useUpdateStoreOrderStatus } from '../../hooks/useQueries';
+import type { StoreOrder } from '../../hooks/useQueries';
 import { Button } from '@/components/ui/button';
-import { Loader2, Download, Mail, Phone, ArrowUpDown, Filter } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { UnifiedOrder } from '../../backend';
-import { OrderType } from '../../backend';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
 
-type SortField = 'id' | 'customerName' | 'email' | 'orderType' | 'timestamp';
-type SortDirection = 'asc' | 'desc';
+const STATUS_OPTIONS = ['pending', 'processing', 'shipped', 'completed', 'cancelled'];
+
+const STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
+  pending: { label: 'Pending', icon: Clock, variant: 'secondary' },
+  processing: { label: 'Processing', icon: RefreshCw, variant: 'default' },
+  shipped: { label: 'Shipped', icon: Truck, variant: 'outline' },
+  completed: { label: 'Completed', icon: CheckCircle, variant: 'default' },
+  cancelled: { label: 'Cancelled', icon: XCircle, variant: 'destructive' },
+};
+
+function StatusBadge({ status }: { status: string }) {
+  const config = STATUS_CONFIG[status.toLowerCase()] ?? STATUS_CONFIG.pending;
+  const Icon = config.icon;
+  return (
+    <Badge variant={config.variant} className="gap-1 capitalize">
+      <Icon className="w-3 h-3" />
+      {config.label}
+    </Badge>
+  );
+}
+
+function OrderRow({ order, onStatusChange, isUpdating }: {
+  order: StoreOrder;
+  onStatusChange: (id: string, status: string) => void;
+  isUpdating: boolean;
+}) {
+  const priceInDollars = (Number(order.productPrice) / 100).toFixed(2);
+  const date = new Date(Number(order.timestamp) / 1_000_000);
+  const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+  return (
+    <TableRow>
+      <TableCell className="font-mono text-xs text-muted-foreground max-w-[100px] truncate">
+        {order.id.slice(0, 16)}...
+      </TableCell>
+      <TableCell>
+        <div>
+          <p className="font-medium text-foreground text-sm">{order.customerName}</p>
+          <p className="text-muted-foreground text-xs">{order.email}</p>
+          {order.phone && <p className="text-muted-foreground text-xs">{order.phone}</p>}
+        </div>
+      </TableCell>
+      <TableCell>
+        <div>
+          <p className="font-medium text-foreground text-sm">{order.productName}</p>
+          <p className="text-muted-foreground text-xs line-clamp-1">{order.productDescription}</p>
+        </div>
+      </TableCell>
+      <TableCell className="font-bold text-primary">${priceInDollars}</TableCell>
+      <TableCell>
+        <StatusBadge status={order.status} />
+      </TableCell>
+      <TableCell className="text-muted-foreground text-xs">{dateStr}</TableCell>
+      <TableCell>
+        {order.paymentProof && (
+          <a
+            href={order.paymentProof.getDirectURL()}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline text-xs"
+          >
+            View Proof
+          </a>
+        )}
+      </TableCell>
+      <TableCell>
+        <Select
+          value={order.status}
+          onValueChange={(val) => onStatusChange(order.id, val)}
+          disabled={isUpdating}
+        >
+          <SelectTrigger className="w-36 h-8 text-xs rounded-lg">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUS_OPTIONS.map((s) => (
+              <SelectItem key={s} value={s} className="text-xs capitalize">
+                {s.charAt(0).toUpperCase() + s.slice(1)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </TableCell>
+    </TableRow>
+  );
+}
 
 export default function OrdersManagement() {
-  const { data: orders, isLoading } = useGetAllUnifiedOrders();
-  const [sortField, setSortField] = useState<SortField>('timestamp');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  const [filterType, setFilterType] = useState<'all' | 'custom' | 'store'>('all');
+  const { data: orders, isLoading, error, refetch } = useGetAllStoreOrders();
+  const updateStatus = useUpdateStoreOrderStatus();
+  const [filterStatus, setFilterStatus] = useState<string>('all');
 
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
-    }
-  };
-
-  const sortedAndFilteredOrders = useMemo(() => {
-    if (!orders) return [];
-
-    // Filter orders
-    let filtered = orders;
-    if (filterType !== 'all') {
-      filtered = orders.filter(order => {
-        if (filterType === 'custom') return order.orderType === OrderType.custom;
-        if (filterType === 'store') return order.orderType === OrderType.store;
-        return true;
-      });
-    }
-
-    // Sort orders
-    return [...filtered].sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
-
-      switch (sortField) {
-        case 'id':
-          aValue = a.id;
-          bValue = b.id;
-          break;
-        case 'customerName':
-          aValue = a.customerName.toLowerCase();
-          bValue = b.customerName.toLowerCase();
-          break;
-        case 'email':
-          aValue = (a.email || '').toLowerCase();
-          bValue = (b.email || '').toLowerCase();
-          break;
-        case 'orderType':
-          aValue = a.orderType === OrderType.custom ? 'custom' : 'store';
-          bValue = b.orderType === OrderType.custom ? 'custom' : 'store';
-          break;
-        case 'timestamp':
-          aValue = Number(a.timestamp);
-          bValue = Number(b.timestamp);
-          break;
-        default:
-          return 0;
-      }
-
-      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
-      return 0;
-    });
-  }, [orders, sortField, sortDirection, filterType]);
-
-  const handleDownloadFile = async (orderId: string, file: any, fileName: string) => {
+  const handleStatusChange = async (id: string, status: string) => {
     try {
-      const bytes = await file.getBytes();
-      const blob = new Blob([bytes], { type: 'application/octet-stream' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Failed to download file:', error);
+      await updateStatus.mutateAsync({ id, status });
+      toast.success(`Order status updated to ${status}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to update status';
+      toast.error(msg);
     }
   };
 
-  const formatDate = (timestamp: bigint) => {
-    const date = new Date(Number(timestamp) / 1000000); // Convert nanoseconds to milliseconds
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+  const filteredOrders = (orders ?? []).filter((o) =>
+    filterStatus === 'all' ? true : o.status.toLowerCase() === filterStatus
+  );
+
+  const sortedOrders = [...filteredOrders].sort(
+    (a, b) => Number(b.timestamp) - Number(a.timestamp)
+  );
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </CardContent>
-      </Card>
+      <div className="space-y-3">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} className="h-16 w-full rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-destructive mb-4">Failed to load orders</p>
+        <Button onClick={() => refetch()} variant="outline" className="rounded-full gap-2">
+          <RefreshCw className="w-4 h-4" />
+          Retry
+        </Button>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <CardTitle>All Orders</CardTitle>
-            <CardDescription>View all custom and store orders in one unified list</CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select value={filterType} onValueChange={(value: any) => setFilterType(value)}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Filter by type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Orders</SelectItem>
-                <SelectItem value="custom">Custom Only</SelectItem>
-                <SelectItem value="store">Store Only</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-foreground">Store Orders</h2>
+          <p className="text-muted-foreground text-sm">{orders?.length ?? 0} total orders</p>
         </div>
-      </CardHeader>
-      <CardContent>
-        {sortedAndFilteredOrders && sortedAndFilteredOrders.length > 0 ? (
-          <div className="rounded-md border overflow-x-auto">
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4 text-muted-foreground" />
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-40 rounded-lg">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Orders</SelectItem>
+              {STATUS_OPTIONS.map((s) => (
+                <SelectItem key={s} value={s} className="capitalize">
+                  {s.charAt(0).toUpperCase() + s.slice(1)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        {STATUS_OPTIONS.map((s) => {
+          const count = (orders ?? []).filter((o) => o.status.toLowerCase() === s).length;
+          const config = STATUS_CONFIG[s];
+          const Icon = config.icon;
+          return (
+            <div key={s} className="bg-card border border-border rounded-xl p-3 text-center">
+              <Icon className="w-4 h-4 mx-auto mb-1 text-muted-foreground" />
+              <p className="text-xl font-bold text-foreground">{count}</p>
+              <p className="text-xs text-muted-foreground capitalize">{s}</p>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Table */}
+      {sortedOrders.length === 0 ? (
+        <div className="text-center py-16 bg-card border border-border rounded-xl">
+          <Package className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-40" />
+          <p className="text-foreground font-medium">No orders found</p>
+          <p className="text-muted-foreground text-sm mt-1">
+            {filterStatus !== 'all' ? `No ${filterStatus} orders` : 'Orders will appear here once customers place them'}
+          </p>
+        </div>
+      ) : (
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 px-2 font-semibold"
-                      onClick={() => handleSort('orderType')}
-                    >
-                      Type
-                      <ArrowUpDown className="ml-2 h-3 w-3" />
-                    </Button>
-                  </TableHead>
-                  <TableHead>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 px-2 font-semibold"
-                      onClick={() => handleSort('id')}
-                    >
-                      Order ID
-                      <ArrowUpDown className="ml-2 h-3 w-3" />
-                    </Button>
-                  </TableHead>
-                  <TableHead>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 px-2 font-semibold"
-                      onClick={() => handleSort('customerName')}
-                    >
-                      Customer
-                      <ArrowUpDown className="ml-2 h-3 w-3" />
-                    </Button>
-                  </TableHead>
-                  <TableHead>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 px-2 font-semibold"
-                      onClick={() => handleSort('email')}
-                    >
-                      Contact
-                      <ArrowUpDown className="ml-2 h-3 w-3" />
-                    </Button>
-                  </TableHead>
-                  <TableHead>Details</TableHead>
-                  <TableHead>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 px-2 font-semibold"
-                      onClick={() => handleSort('timestamp')}
-                    >
-                      Date
-                      <ArrowUpDown className="ml-2 h-3 w-3" />
-                    </Button>
-                  </TableHead>
-                  <TableHead className="text-right">Files</TableHead>
+                  <TableHead className="text-xs">Order ID</TableHead>
+                  <TableHead className="text-xs">Customer</TableHead>
+                  <TableHead className="text-xs">Product</TableHead>
+                  <TableHead className="text-xs">Total</TableHead>
+                  <TableHead className="text-xs">Status</TableHead>
+                  <TableHead className="text-xs">Date</TableHead>
+                  <TableHead className="text-xs">Payment</TableHead>
+                  <TableHead className="text-xs">Update Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedAndFilteredOrders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell>
-                      <Badge variant={order.orderType === OrderType.custom ? 'default' : 'secondary'}>
-                        {order.orderType === OrderType.custom ? 'Custom' : 'Store'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="font-mono text-xs">
-                        {order.id}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="font-medium">{order.customerName}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-1 text-sm">
-                        {order.email && (
-                          <div className="flex items-center gap-1">
-                            <Mail className="h-3 w-3" />
-                            <a href={`mailto:${order.email}`} className="text-primary hover:underline">
-                              {order.email}
-                            </a>
-                          </div>
-                        )}
-                        {order.phone && (
-                          <div className="flex items-center gap-1">
-                            <Phone className="h-3 w-3" />
-                            <a href={`tel:${order.phone}`} className="text-primary hover:underline">
-                              {order.phone}
-                            </a>
-                          </div>
-                        )}
-                        {!order.email && !order.phone && (
-                          <span className="text-muted-foreground text-xs">No contact info</span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="max-w-xs">
-                      {order.orderType === OrderType.custom ? (
-                        <p className="text-sm truncate">{order.description}</p>
-                      ) : (
-                        <div className="text-sm">
-                          <p className="font-medium">{order.productName}</p>
-                          <p className="text-muted-foreground truncate">{order.productDescription}</p>
-                          <p className="font-semibold text-primary mt-1">
-                            ${order.productPrice ? Number(order.productPrice).toFixed(2) : '0.00'}
-                          </p>
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatDate(order.timestamp)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex gap-2 justify-end">
-                        {order.modelFile ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDownloadFile(order.id, order.modelFile, `model-${order.id}.stl`)}
-                          >
-                            <Download className="h-4 w-4 mr-2" />
-                            Model
-                          </Button>
-                        ) : order.orderType === OrderType.custom ? (
-                          <Badge variant="outline" className="text-xs">
-                            No file uploaded
-                          </Badge>
-                        ) : null}
-                        {order.paymentProof && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDownloadFile(order.id, order.paymentProof, `payment-${order.id}.jpg`)}
-                          >
-                            <Download className="h-4 w-4 mr-2" />
-                            Payment
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                {sortedOrders.map((order) => (
+                  <OrderRow
+                    key={order.id}
+                    order={order}
+                    onStatusChange={handleStatusChange}
+                    isUpdating={updateStatus.isPending}
+                  />
                 ))}
               </TableBody>
             </Table>
           </div>
-        ) : (
-          <div className="text-center py-12 text-muted-foreground">
-            {filterType === 'all' ? 'No orders yet.' : `No ${filterType} orders yet.`}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        </div>
+      )}
+    </div>
   );
 }

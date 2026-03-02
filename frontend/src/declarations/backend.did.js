@@ -56,6 +56,7 @@ export const Product = IDL.Record({
 export const StoreOrder = IDL.Record({
   'id' : IDL.Text,
   'customerName' : IDL.Text,
+  'status' : IDL.Text,
   'productId' : IDL.Text,
   'productName' : IDL.Text,
   'email' : IDL.Text,
@@ -72,6 +73,7 @@ export const OrderType = IDL.Variant({
 export const UnifiedOrder = IDL.Record({
   'id' : IDL.Text,
   'customerName' : IDL.Text,
+  'status' : IDL.Opt(IDL.Text),
   'description' : IDL.Text,
   'productId' : IDL.Opt(IDL.Text),
   'productName' : IDL.Opt(IDL.Text),
@@ -88,10 +90,6 @@ export const UserProfile = IDL.Record({
   'name' : IDL.Text,
   'email' : IDL.Text,
   'isAdmin' : IDL.Bool,
-});
-export const RoleAssignmentResult = IDL.Variant({
-  'alreadyAssigned' : IDL.Null,
-  'success' : UserRole,
 });
 
 export const idlService = IDL.Service({
@@ -133,7 +131,6 @@ export const idlService = IDL.Service({
       [],
     ),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
-  'completePasswordReset' : IDL.Func([IDL.Text], [], []),
   'deleteGalleryItem' : IDL.Func([IDL.Text], [], []),
   'deleteProduct' : IDL.Func([IDL.Text], [], []),
   'getAllCustomOrders' : IDL.Func([], [IDL.Vec(CustomOrder)], ['query']),
@@ -160,12 +157,9 @@ export const idlService = IDL.Service({
       [IDL.Opt(UserProfile)],
       ['query'],
     ),
-  'hasPendingPasswordReset' : IDL.Func([IDL.Text], [IDL.Bool], ['query']),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
-  'registerUserProfile' : IDL.Func([IDL.Text, IDL.Text, IDL.Bool], [], []),
-  'requestPasswordReset' : IDL.Func([IDL.Text], [], []),
+  'registerUserProfile' : IDL.Func([IDL.Text, IDL.Text], [], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
-  'setRoleForCaller' : IDL.Func([UserRole], [RoleAssignmentResult], []),
   'submitCustomOrder' : IDL.Func(
       [
         IDL.Text,
@@ -208,6 +202,7 @@ export const idlService = IDL.Service({
       [],
       [],
     ),
+  'updateStoreOrderStatus' : IDL.Func([IDL.Text, IDL.Text], [], []),
   'verifyAndEnsureAdminStatus' : IDL.Func([], [IDL.Bool], []),
 });
 
@@ -262,6 +257,7 @@ export const idlFactory = ({ IDL }) => {
   const StoreOrder = IDL.Record({
     'id' : IDL.Text,
     'customerName' : IDL.Text,
+    'status' : IDL.Text,
     'productId' : IDL.Text,
     'productName' : IDL.Text,
     'email' : IDL.Text,
@@ -275,6 +271,7 @@ export const idlFactory = ({ IDL }) => {
   const UnifiedOrder = IDL.Record({
     'id' : IDL.Text,
     'customerName' : IDL.Text,
+    'status' : IDL.Opt(IDL.Text),
     'description' : IDL.Text,
     'productId' : IDL.Opt(IDL.Text),
     'productName' : IDL.Opt(IDL.Text),
@@ -291,10 +288,6 @@ export const idlFactory = ({ IDL }) => {
     'name' : IDL.Text,
     'email' : IDL.Text,
     'isAdmin' : IDL.Bool,
-  });
-  const RoleAssignmentResult = IDL.Variant({
-    'alreadyAssigned' : IDL.Null,
-    'success' : UserRole,
   });
   
   return IDL.Service({
@@ -336,7 +329,6 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
-    'completePasswordReset' : IDL.Func([IDL.Text], [], []),
     'deleteGalleryItem' : IDL.Func([IDL.Text], [], []),
     'deleteProduct' : IDL.Func([IDL.Text], [], []),
     'getAllCustomOrders' : IDL.Func([], [IDL.Vec(CustomOrder)], ['query']),
@@ -363,12 +355,9 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Opt(UserProfile)],
         ['query'],
       ),
-    'hasPendingPasswordReset' : IDL.Func([IDL.Text], [IDL.Bool], ['query']),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
-    'registerUserProfile' : IDL.Func([IDL.Text, IDL.Text, IDL.Bool], [], []),
-    'requestPasswordReset' : IDL.Func([IDL.Text], [], []),
+    'registerUserProfile' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
-    'setRoleForCaller' : IDL.Func([UserRole], [RoleAssignmentResult], []),
     'submitCustomOrder' : IDL.Func(
         [
           IDL.Text,
@@ -411,6 +400,7 @@ export const idlFactory = ({ IDL }) => {
         [],
         [],
       ),
+    'updateStoreOrderStatus' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'verifyAndEnsureAdminStatus' : IDL.Func([], [IDL.Bool], []),
   });
 };

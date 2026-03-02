@@ -1,58 +1,101 @@
 {
   "kind": "build_request",
-  "title": "Fix branding to 'Creative Prints and Design' and restore logo",
+  "title": "Full e-commerce storefront with order placement and admin panel for Creative Prints and Design",
   "projectName": "Creative Prints and Design",
-  "priority": "normal",
+  "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Update all instances of the app name displayed in the UI (header, page title, footer, any branding text) from 'cp&d' or any abbreviation to 'Creative Prints and Design'.",
+      "text": "Implement a customer-facing store page that displays all 3D printed products with product images, names, descriptions, and prices fetched from the backend.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-recent"
+          "msg-10"
         ],
         "quotes": [
-          "The name is \"Creative Prints and Design\""
+          "Yes, to the second question"
         ]
       },
       "acceptanceCriteria": [
-        "The header/navbar displays 'Creative Prints and Design' as the app name",
-        "The HTML page title (index.html) reads 'Creative Prints and Design'",
-        "No instance of 'cp&d' or abbreviated branding appears anywhere in the UI"
+        "Store page renders a responsive product grid",
+        "Each product card shows image, name, description, and formatted price",
+        "Products are fetched from the backend via React Query"
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Replace the current logo in the app header/navbar with the uploaded logo image (creative-prints-logo.dim_256x256.png) stored in frontend/public/assets/generated/.",
-      "target": "frontend",
+      "text": "Allow customers to place orders through the site by adding products to a cart and completing a checkout flow that captures customer details and submits a store order to the backend.",
+      "target": "both",
       "source": {
         "messageIds": [
-          "msg-recent"
+          "msg-10"
         ],
         "quotes": [
-          "The name is \"Creative Prints and Design\""
+          "I want them to be able to place orders and browse products"
         ]
       },
       "acceptanceCriteria": [
-        "The header displays the circular 3D-printer logo from the uploaded image",
-        "The logo renders cleanly at standard navbar height without distortion",
-        "The logo links to the home page"
+        "Customers can add products to a cart from the store page",
+        "A checkout page collects customer name, email, shipping address, and order details",
+        "Submitting the checkout form creates a StoreOrder record in the backend",
+        "A success confirmation is shown after order submission"
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "text": "Restrict admin panel access exclusively to the Internet Identity principal associated with lanepeevy@gmail.com. The backend must verify admin identity on all admin operations and the frontend must only render the admin panel when the authenticated user is recognized as admin.",
+      "target": "both",
+      "source": {
+        "messageIds": [
+          "msg-6",
+          "msg-8"
+        ],
+        "quotes": [
+          "Admin access is currently determined by email. And I want it to have my Admin access registered with lanepeevy@gmail.com",
+          "I just want to be able to add my 3d printed products look at orders, you know admin stuff"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Backend exposes an isAdmin query that returns true only for the designated admin principal",
+        "Admin dashboard page checks isAdmin on load and redirects non-admins away",
+        "The admin navigation link in the header is only visible to the authenticated admin",
+        "All admin mutations (add/edit/delete product, update order status) reject calls from non-admin principals"
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "text": "Build an admin dashboard with tabs for Products management and Orders management. The Products tab must allow the admin to add, edit, and delete 3D printed products (with image upload, name, description, price). The Orders tab must display all customer orders with status, customer details, and the ability to update order status.",
+      "target": "both",
+      "source": {
+        "messageIds": [
+          "msg-8"
+        ],
+        "quotes": [
+          "I just want to be able to add my 3d printed products look at orders, you know admin stuff"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Admin dashboard has at minimum a Products tab and an Orders tab",
+        "Products tab lists all products and provides add/edit/delete dialogs with image upload",
+        "Orders tab lists all store orders with customer name, items ordered, total, and current status",
+        "Admin can update the status of an order (e.g., Pending → Processing → Shipped → Completed)",
+        "All changes persist in the backend canister state"
       ]
     }
   ],
   "constraints": [
-    "Do not alter backend data models or admin logic",
-    "Do not modify files under frontend/src/hooks/ (immutable paths)"
+    "Admin access must be gated by Internet Identity principal, not a manually entered email field",
+    "All backend logic must remain in a single Motoko actor (backend/main.mo)",
+    "Do not modify files listed in frontend.immutablePaths"
   ],
   "nonGoals": [
-    "Admin access flow changes are out of scope for this request",
-    "Redesigning the overall color scheme or layout"
+    "Third-party payment processing (Stripe, PayPal, etc.)",
+    "Email notification system for orders",
+    "Customer account creation or login beyond Internet Identity",
+    "Multi-admin support — only lanepeevy@gmail.com is admin"
   ],
   "imageRequirements": {
-    "required": [
-      "Circular logo featuring a dark navy blue 3D printer inside a circle with a teardrop/filament drip element, overlaid with bold white text reading 'Creative Prints' in two lines, clean white background (creative-prints-logo.dim_256x256.png)"
-    ],
+    "required": [],
     "edits": []
   }
 }

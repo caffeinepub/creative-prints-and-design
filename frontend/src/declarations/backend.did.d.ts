@@ -41,11 +41,10 @@ export interface Product {
   'image' : ExternalBlob,
   'price' : bigint,
 }
-export type RoleAssignmentResult = { 'alreadyAssigned' : null } |
-  { 'success' : UserRole };
 export interface StoreOrder {
   'id' : string,
   'customerName' : string,
+  'status' : string,
   'productId' : string,
   'productName' : string,
   'email' : string,
@@ -58,6 +57,7 @@ export interface StoreOrder {
 export interface UnifiedOrder {
   'id' : string,
   'customerName' : string,
+  'status' : [] | [string],
   'description' : string,
   'productId' : [] | [string],
   'productName' : [] | [string],
@@ -115,7 +115,6 @@ export interface _SERVICE {
     undefined
   >,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
-  'completePasswordReset' : ActorMethod<[string], undefined>,
   'deleteGalleryItem' : ActorMethod<[string], undefined>,
   'deleteProduct' : ActorMethod<[string], undefined>,
   'getAllCustomOrders' : ActorMethod<[], Array<CustomOrder>>,
@@ -130,12 +129,9 @@ export interface _SERVICE {
   'getPrincipalByEmail' : ActorMethod<[string], [] | [Principal]>,
   'getProduct' : ActorMethod<[string], Product>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
-  'hasPendingPasswordReset' : ActorMethod<[string], boolean>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
-  'registerUserProfile' : ActorMethod<[string, string, boolean], undefined>,
-  'requestPasswordReset' : ActorMethod<[string], undefined>,
+  'registerUserProfile' : ActorMethod<[string, string], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
-  'setRoleForCaller' : ActorMethod<[UserRole], RoleAssignmentResult>,
   'submitCustomOrder' : ActorMethod<
     [string, string, [] | [string], [] | [string], string, [] | [ExternalBlob]],
     undefined
@@ -166,6 +162,7 @@ export interface _SERVICE {
     [string, string, string, bigint, ExternalBlob],
     undefined
   >,
+  'updateStoreOrderStatus' : ActorMethod<[string, string], undefined>,
   'verifyAndEnsureAdminStatus' : ActorMethod<[], boolean>,
 }
 export declare const idlService: IDL.ServiceClass;

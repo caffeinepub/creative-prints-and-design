@@ -1,8 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useActor } from './useActor';
-import { useAuth } from './useAuth';
-import type { Product, GalleryItem, CustomOrder, StoreOrder, PaymentConfirmation, UnifiedOrder, UserProfile } from '../backend';
+import { useInternetIdentity } from './useInternetIdentity';
+import type { Product, GalleryItem, CustomOrder, StoreOrder, PaymentConfirmation, UserProfile } from '../backend';
 import { ExternalBlob } from '../backend';
+
+export type { Product, GalleryItem, CustomOrder, StoreOrder, PaymentConfirmation, UserProfile };
 
 // ─── Products ────────────────────────────────────────────────────────────────
 
@@ -22,11 +24,11 @@ export function useAddProduct() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: {
-      id: string; name: string; description: string; price: bigint; image: ExternalBlob;
-    }) => {
+    mutationFn: async ({
+      id, name, description, price, image,
+    }: { id: string; name: string; description: string; price: bigint; image: ExternalBlob }) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.addProduct(data.id, data.name, data.description, data.price, data.image);
+      return actor.addProduct(id, name, description, price, image);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['products'] }),
   });
@@ -36,11 +38,11 @@ export function useUpdateProduct() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: {
-      id: string; name: string; description: string; price: bigint; image: ExternalBlob;
-    }) => {
+    mutationFn: async ({
+      id, name, description, price, image,
+    }: { id: string; name: string; description: string; price: bigint; image: ExternalBlob }) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.updateProduct(data.id, data.name, data.description, data.price, data.image);
+      return actor.updateProduct(id, name, description, price, image);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['products'] }),
   });
@@ -76,11 +78,11 @@ export function useAddGalleryItem() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: {
-      id: string; title: string; description: string; image: ExternalBlob;
-    }) => {
+    mutationFn: async ({
+      id, title, description, image,
+    }: { id: string; title: string; description: string; image: ExternalBlob }) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.addGalleryItem(data.id, data.title, data.description, data.image);
+      return actor.addGalleryItem(id, title, description, image);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['galleryItems'] }),
   });
@@ -90,11 +92,11 @@ export function useUpdateGalleryItem() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: {
-      id: string; title: string; description: string; image: ExternalBlob;
-    }) => {
+    mutationFn: async ({
+      id, title, description, image,
+    }: { id: string; title: string; description: string; image: ExternalBlob }) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.updateGalleryItem(data.id, data.title, data.description, data.image);
+      return actor.updateGalleryItem(id, title, description, image);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['galleryItems'] }),
   });
@@ -114,57 +116,22 @@ export function useDeleteGalleryItem() {
 
 // ─── Orders ───────────────────────────────────────────────────────────────────
 
-export function useGetAllUnifiedOrders() {
-  const { actor, isFetching } = useActor();
-  return useQuery<UnifiedOrder[]>({
-    queryKey: ['unifiedOrders'],
-    queryFn: async () => {
-      if (!actor) throw new Error('Actor not available');
-      return actor.getAllUnifiedOrders();
-    },
-    enabled: !!actor && !isFetching,
-    retry: false,
-  });
-}
-
-export function useGetAllCustomOrders() {
-  const { actor, isFetching } = useActor();
-  return useQuery<CustomOrder[]>({
-    queryKey: ['customOrders'],
-    queryFn: async () => {
-      if (!actor) throw new Error('Actor not available');
-      return actor.getAllCustomOrders();
-    },
-    enabled: !!actor && !isFetching,
-    retry: false,
-  });
-}
-
-export function useGetAllStoreOrders() {
-  const { actor, isFetching } = useActor();
-  return useQuery<StoreOrder[]>({
-    queryKey: ['storeOrders'],
-    queryFn: async () => {
-      if (!actor) throw new Error('Actor not available');
-      return actor.getAllStoreOrders();
-    },
-    enabled: !!actor && !isFetching,
-    retry: false,
-  });
-}
-
 export function useSubmitCustomOrder() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: {
-      id: string; name: string; email: string | null; phone: string | null;
-      description: string; modelFile: ExternalBlob | null;
+    mutationFn: async ({
+      id, name, email, phone, description, modelFile,
+    }: {
+      id: string;
+      name: string;
+      email: string | null;
+      phone: string | null;
+      description: string;
+      modelFile: ExternalBlob | null;
     }) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.submitCustomOrder(
-        data.id, data.name, data.email, data.phone, data.description, data.modelFile
-      );
+      return actor.submitCustomOrder(id, name, email, phone, description, modelFile);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['customOrders'] }),
   });
@@ -174,34 +141,76 @@ export function useSubmitStoreOrder() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: {
-      id: string; customerName: string; email: string; phone: string;
-      productId: string; productName: string; productDescription: string;
-      productPrice: bigint; paymentProof: ExternalBlob | null;
+    mutationFn: async ({
+      id, customerName, email, phone, productId, productName, productDescription, productPrice, paymentProof,
+    }: {
+      id: string;
+      customerName: string;
+      email: string;
+      phone: string;
+      productId: string;
+      productName: string;
+      productDescription: string;
+      productPrice: bigint;
+      paymentProof: ExternalBlob | null;
     }) => {
       if (!actor) throw new Error('Actor not available');
       return actor.submitStoreOrder(
-        data.id, data.customerName, data.email, data.phone,
-        data.productId, data.productName, data.productDescription,
-        data.productPrice, data.paymentProof
+        id, customerName, email, phone, productId, productName, productDescription, productPrice, paymentProof
       );
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['storeOrders'] }),
   });
 }
 
-// ─── Payments ─────────────────────────────────────────────────────────────────
+export function useGetAllStoreOrders() {
+  const { actor, isFetching } = useActor();
+  const { identity } = useInternetIdentity();
+  return useQuery<StoreOrder[]>({
+    queryKey: ['storeOrders'],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getAllStoreOrders();
+    },
+    enabled: !!actor && !isFetching && !!identity,
+  });
+}
+
+export function useUpdateStoreOrderStatus() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.updateStoreOrderStatus(id, status);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['storeOrders'] }),
+  });
+}
+
+export function useGetAllCustomOrders() {
+  const { actor, isFetching } = useActor();
+  const { identity } = useInternetIdentity();
+  return useQuery<CustomOrder[]>({
+    queryKey: ['customOrders'],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getAllCustomOrders();
+    },
+    enabled: !!actor && !isFetching && !!identity,
+  });
+}
 
 export function useGetAllPaymentConfirmations() {
   const { actor, isFetching } = useActor();
+  const { identity } = useInternetIdentity();
   return useQuery<PaymentConfirmation[]>({
     queryKey: ['paymentConfirmations'],
     queryFn: async () => {
-      if (!actor) throw new Error('Actor not available');
+      if (!actor) return [];
       return actor.getAllPaymentConfirmations();
     },
-    enabled: !!actor && !isFetching,
-    retry: false,
+    enabled: !!actor && !isFetching && !!identity,
   });
 }
 
@@ -209,115 +218,60 @@ export function useSubmitPaymentConfirmation() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: {
-      id: string; customerName: string; orderId: string; proofFile: ExternalBlob;
-    }) => {
+    mutationFn: async ({
+      id, customerName, orderId, proofFile,
+    }: { id: string; customerName: string; orderId: string; proofFile: ExternalBlob }) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.submitPaymentConfirmation(data.id, data.customerName, data.orderId, data.proofFile);
+      return actor.submitPaymentConfirmation(id, customerName, orderId, proofFile);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['paymentConfirmations'] }),
   });
 }
 
-// ─── User Profile ─────────────────────────────────────────────────────────────
+// ─── Admin ────────────────────────────────────────────────────────────────────
 
-export function useRegisterUserProfile() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (data: { email: string; name: string; isAdmin: boolean }) => {
-      if (!actor) throw new Error('Actor not available');
-      return actor.registerUserProfile(data.email, data.name, data.isAdmin);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['adminStatus'] });
-      queryClient.invalidateQueries({ queryKey: ['callerUserProfile'] });
-    },
-  });
-}
-
-export function useGetCallerUserProfile() {
+export function useIsCallerAdmin() {
   const { actor, isFetching } = useActor();
-  return useQuery<UserProfile | null>({
-    queryKey: ['callerUserProfile'],
-    queryFn: async () => {
-      if (!actor) return null;
-      return actor.getCallerUserProfile();
-    },
-    enabled: !!actor && !isFetching,
-  });
-}
-
-export function useSaveCallerUserProfile() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (profile: UserProfile) => {
-      if (!actor) throw new Error('Actor not available');
-      return actor.saveCallerUserProfile(profile);
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['callerUserProfile'] }),
-  });
-}
-
-// ─── Admin Verification ───────────────────────────────────────────────────────
-//
-// Strategy:
-//   1. Call verifyAndEnsureAdminStatus() (update) to register/elevate the admin
-//      principal in the backend's access-control state.
-//   2. Then call isCallerAdmin() (query) to confirm the result.
-//
-// We run this whenever the actor is ready AND the local auth says the user is
-// authenticated.  We do NOT gate on the local isAdmin() flag so that the
-// backend is always the source of truth.
-
-export function useVerifyAdminStatus() {
-  const { actor, isFetching: actorFetching } = useActor();
-  const { isAuthenticated, user } = useAuth();
+  const { identity } = useInternetIdentity();
 
   return useQuery<boolean>({
-    queryKey: ['adminStatus', user?.email ?? 'anonymous'],
+    queryKey: ['isCallerAdmin', identity?.getPrincipal().toString()],
     queryFn: async () => {
       if (!actor) return false;
       try {
-        // Step 1: ensure the backend has the admin role set for this principal
-        await actor.verifyAndEnsureAdminStatus();
-        // Step 2: authoritative query check
-        const result = await actor.isCallerAdmin();
-        return result;
-      } catch (err) {
-        // If verifyAndEnsureAdminStatus traps, fall back to isCallerAdmin alone
-        try {
-          return await actor.isCallerAdmin();
-        } catch {
-          return false;
-        }
+        const result = await actor.verifyAndEnsureAdminStatus();
+        if (result) return true;
+        return actor.isCallerAdmin();
+      } catch {
+        return false;
       }
     },
-    enabled: !!actor && !actorFetching && isAuthenticated,
-    retry: false,
+    enabled: !!actor && !isFetching && !!identity,
     staleTime: 0,
   });
 }
 
-// ─── Password Reset ───────────────────────────────────────────────────────────
+// Keep backward compat alias
+export const useVerifyAdminStatus = useIsCallerAdmin;
 
-export function useRequestPasswordReset() {
-  const { actor } = useActor();
-  return useMutation({
-    mutationFn: async (email: string) => {
-      if (!actor) throw new Error('Actor not available');
-      return actor.requestPasswordReset(email);
-    },
-  });
-}
+// ─── User Profile ─────────────────────────────────────────────────────────────
 
-export function useCompletePasswordReset() {
-  const { actor } = useActor();
-  return useMutation({
-    mutationFn: async (email: string) => {
+export function useGetCallerUserProfile() {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  const query = useQuery<UserProfile | null>({
+    queryKey: ['currentUserProfile'],
+    queryFn: async () => {
       if (!actor) throw new Error('Actor not available');
-      return actor.completePasswordReset(email);
+      return actor.getCallerUserProfile();
     },
+    enabled: !!actor && !actorFetching,
+    retry: false,
   });
+
+  return {
+    ...query,
+    isLoading: actorFetching || query.isLoading,
+    isFetched: !!actor && query.isFetched,
+  };
 }

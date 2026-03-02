@@ -1,47 +1,123 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Fix branding to 'Creative Prints and Design' and restore logo",
+  "title": "Full e-commerce storefront with order placement and admin panel for Creative Prints and Design",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Update all UI text from 'cp&d' or abbreviations to 'Creative Prints and Design'",
+      "summary": "Implement a customer-facing store page that displays all 3D printed products with product images, names, descriptions, and prices fetched from the backend.",
       "acceptanceCriteria": [
-        "The header/navbar displays 'Creative Prints and Design' as the app name",
-        "The HTML page title (index.html) reads 'Creative Prints and Design'",
-        "No instance of 'cp&d' or abbreviated branding appears anywhere in the UI"
+        "Store page renders a responsive product grid",
+        "Each product card shows image, name, description, and formatted price",
+        "Products are fetched from the backend via React Query"
       ],
       "file_operations": [
         {
-          "path": "frontend/index.html",
+          "path": "frontend/src/pages/StorePage.tsx",
           "operation": "modify",
-          "description": "Update the <title> tag from its current value to 'Creative Prints and Design' to reflect the full brand name in the browser tab."
-        },
-        {
-          "path": "frontend/src/components/Layout.tsx",
-          "operation": "modify",
-          "description": "Replace any abbreviated branding text (e.g., 'cp&d') in the header navigation with 'Creative Prints and Design'. Ensure the brand text next to the logo reads the full name."
-        },
-        {
-          "path": "frontend/src/pages/HomePage.tsx",
-          "operation": "modify",
-          "description": "Review and update any branding text in the hero section or features grid to use 'Creative Prints and Design' instead of abbreviations."
+          "description": "Update the StorePage component to fetch products using the useGetAllProducts query hook and display them in a responsive grid. Each product card must show the product image using ExternalBlob's getDirectURL() method, product name, description, and price formatted as currency (price/100). Use the blob-storage component to handle product images. Verify the component's usage instructions before implementing. Ensure proper loading states, error handling, and empty state messaging."
         }
       ]
     },
     {
       "id": "REQ-2",
-      "summary": "Replace header logo with the uploaded circular 3D-printer logo image",
+      "summary": "Allow customers to place orders through the site by adding products to a cart and completing a checkout flow that captures customer details and submits a store order to the backend.",
       "acceptanceCriteria": [
-        "The header displays the circular 3D-printer logo from the uploaded image",
-        "The logo renders cleanly at standard navbar height without distortion",
-        "The logo links to the home page"
+        "Customers can add products to a cart from the store page",
+        "A checkout page collects customer name, email, shipping address, and order details",
+        "Submitting the checkout form creates a StoreOrder record in the backend",
+        "A success confirmation is shown after order submission"
       ],
       "file_operations": [
         {
+          "path": "frontend/src/hooks/useCart.ts",
+          "operation": "create",
+          "description": "Create a Zustand store hook that manages shopping cart state with localStorage persistence. Include cart items (productId, productName, productDescription, productPrice, quantity), addToCart, removeFromCart, updateQuantity, clearCart, and computed total price. Each cart item should track the full product details needed for checkout."
+        },
+        {
+          "path": "frontend/src/pages/StorePage.tsx",
+          "operation": "modify",
+          "description": "Add 'Add to Cart' button to each product card that calls the addToCart action from useCart hook. Show a toast notification on successful add. Display a cart icon in the product grid header showing item count with a link to the checkout page."
+        },
+        {
+          "path": "frontend/src/pages/CheckoutPage.tsx",
+          "operation": "modify",
+          "description": "Update the CheckoutPage to display cart items from useCart hook with product details, quantities, and line totals. Add a customer details form collecting name, email, phone, and shipping address. Implement the submitStoreOrder mutation from useQueries that creates a StoreOrder for each cart item. Use the blob-storage component for optional payment proof upload via ExternalBlob.fromBytes() with withUploadProgress() for upload tracking. Verify the component's usage instructions before implementing. On successful submission, clear the cart and show a success confirmation message with order details. Handle validation errors and submission failures with appropriate user feedback."
+        },
+        {
+          "path": "frontend/src/pages/OrderSuccessPage.tsx",
+          "operation": "create",
+          "description": "Create a success confirmation page that displays order confirmation details including order number, customer name, items ordered, and total amount. Include a call-to-action button to return to the store and a message thanking the customer. This page is navigated to after successful order submission from CheckoutPage."
+        },
+        {
+          "path": "frontend/src/App.tsx",
+          "operation": "modify",
+          "description": "Register the /order-success route in the router configuration that renders the OrderSuccessPage component. Ensure the route is publicly accessible without authentication."
+        },
+        {
           "path": "frontend/src/components/Layout.tsx",
           "operation": "modify",
-          "description": "Update the header logo to use the generated image at frontend/public/assets/generated/creative-prints-logo.dim_256x256.png (as provided in the uploaded asset). Ensure the logo is wrapped in a link to the home page ('/'), has appropriate alt text ('Creative Prints and Design logo'), and is styled to fit the navbar height (e.g., h-10 or h-12) without distortion using object-fit."
+          "description": "Add a cart icon with badge showing item count in the header navigation. The cart icon should link to /checkout and use the useCart hook to display the current cart item count. Position it near the existing navigation links and ensure it's visible on both desktop and mobile viewports."
+        }
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "summary": "Restrict admin panel access exclusively to the Internet Identity principal associated with lanepeevy@gmail.com. The backend must verify admin identity on all admin operations and the frontend must only render the admin panel when the authenticated user is recognized as admin.",
+      "acceptanceCriteria": [
+        "Backend exposes an isAdmin query that returns true only for the designated admin principal",
+        "Admin dashboard page checks isAdmin on load and redirects non-admins away",
+        "The admin navigation link in the header is only visible to the authenticated admin",
+        "All admin mutations (add/edit/delete product, update order status) reject calls from non-admin principals"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Add a useIsCallerAdmin query hook that calls actor.isCallerAdmin() to determine if the current authenticated user is an admin. Use the authorization component which verifies admin status based on Internet Identity principal. This hook should be enabled only when the actor is available and the user is authenticated. Return loading, error, and isAdmin boolean states."
+        },
+        {
+          "path": "frontend/src/pages/AdminDashboard.tsx",
+          "operation": "modify",
+          "description": "Update the AdminDashboard page to use the useIsCallerAdmin query hook. If isAdmin is false after loading completes, redirect the user to the home page and show a toast notification indicating insufficient permissions. Show a loading state while checking admin status. Use the authorization component to enforce role-based access control. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/components/Layout.tsx",
+          "operation": "modify",
+          "description": "Update the header navigation to conditionally render the 'Admin' link only when the useIsCallerAdmin hook returns true. The admin link should be hidden from non-admin users and guests. Ensure the admin link is visible in both desktop and mobile navigation menus when the user is authenticated as admin."
+        }
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "summary": "Build an admin dashboard with tabs for Products management and Orders management. The Products tab must allow the admin to add, edit, and delete 3D printed products (with image upload, name, description, price). The Orders tab must display all customer orders with status, customer details, and the ability to update order status.",
+      "acceptanceCriteria": [
+        "Admin dashboard has at minimum a Products tab and an Orders tab",
+        "Products tab lists all products and provides add/edit/delete dialogs with image upload",
+        "Orders tab lists all store orders with customer name, items ordered, total, and current status",
+        "Admin can update the status of an order (e.g., Pending → Processing → Shipped → Completed)",
+        "All changes persist in the backend canister state"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/admin/ProductsManagement.tsx",
+          "operation": "modify",
+          "description": "Ensure the ProductsManagement component uses useGetAllProducts to fetch and display all products in a table or grid. Implement add, edit, and delete product dialogs with forms that include name (text), description (textarea), price (number input in dollars, converted to cents as bigint), and image upload. Use ExternalBlob.fromBytes() with withUploadProgress() for image upload tracking via the blob-storage component. Verify the component's usage instructions before implementing. Wire the forms to useAddProduct, useUpdateProduct, and useDeleteProduct mutation hooks from useQueries. Display upload progress during image uploads. Show success/error toasts after mutations complete. Validate that price is a positive number before submission."
+        },
+        {
+          "path": "frontend/src/components/admin/OrdersManagement.tsx",
+          "operation": "modify",
+          "description": "Update the OrdersManagement component to fetch and display all store orders using the useGetAllStoreOrders query hook. Display orders in a sortable table showing order ID, customer name, email, phone, product name, product price, order status, and timestamp. Add a status dropdown or button group for each order that allows the admin to update the order status (options: Pending, Processing, Shipped, Completed, Cancelled). Wire status updates to the useUpdateStoreOrderStatus mutation hook. Show the customer's payment proof image if available using ExternalBlob's getDirectURL(). Display order timestamp in a human-readable format. Include filtering and sorting capabilities by status and date. Show success/error toasts after status updates."
+        },
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Add mutation hooks for admin product management: useAddProduct (calls actor.addProduct with id, name, description, price as bigint, image as ExternalBlob), useUpdateProduct (calls actor.updateProduct with same parameters), useDeleteProduct (calls actor.deleteProduct with id). Add useGetAllStoreOrders query hook (calls actor.getAllStoreOrders) and useUpdateStoreOrderStatus mutation hook (calls actor.updateStoreOrderStatus with id and status string). Ensure all mutations invalidate relevant query caches on success. All hooks should handle loading, error, and success states appropriately."
+        },
+        {
+          "path": "frontend/src/pages/AdminDashboard.tsx",
+          "operation": "modify",
+          "description": "Ensure the AdminDashboard page renders a tabbed interface with at minimum two tabs: 'Products' and 'Orders'. The Products tab should render the ProductsManagement component, and the Orders tab should render the OrdersManagement component. Include proper tab navigation with visual indication of the active tab. Maintain the existing admin status check and redirect logic. Use shadcn/ui Tabs component for the tab interface."
         }
       ]
     }

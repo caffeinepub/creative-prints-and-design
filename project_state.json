@@ -1,28 +1,42 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "Project for 'Creative Prints and Design' - a print and design platform with admin access functionality.",
-  "architectural_notes": [],
-  "known_issues": [
-    "Logo/branding was incorrectly changed to 'cp&d' instead of 'Creative Prints and Design'",
-    "Admin access flow is missing or not easily discoverable"
+  "summary": "E-commerce app for 3D printed products (Creative Prints and Design) with a customer-facing storefront and a secure admin panel. Customers can browse products and place orders. Admin access is restricted to lanepeevy@gmail.com via Internet Identity login.",
+  "architectural_notes": [
+    "Admin access is email-based, restricted to lanepeevy@gmail.com, authenticated via Internet Identity login"
   ],
-  "isFixRequest": true,
-  "imageRequirements": "## Required Images\n- Circular logo featuring a dark navy blue 3D printer inside a circle with a teardrop/filament drip element, overlaid with bold white text reading 'Creative Prints' in two lines, clean white background (creative-prints-logo.dim_256x256.png)",
+  "known_issues": [],
+  "isFixRequest": false,
   "existing_features": [
     {
-      "id": "feature-update-all-instances-of-the-app-name-displayed-in-the-ui-header-page-title-footer-any-branding-text-from-cp-d-or-any-abbreviation-to-creative-prints-and-design",
-      "title": "Update all instances of the app name displayed in the UI (header, page title, footer, any branding text) from 'cp&d' or any abbreviation to 'Creative Prints and Design'.",
+      "id": "feature-implement-a-customer-facing-store-page-that-displays-all-3d-printed-products-with-product-images-names-descriptions-and-prices-fetched-from-the-backend",
+      "title": "Implement a customer-facing store page that displays all 3D printed products with product images, names, descriptions, and prices fetched from the backend.",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
     },
     {
-      "id": "feature-replace-the-current-logo-in-the-app-header-navbar-with-the-uploaded-logo-image-creative-prints-logo-dim-256x256-png-stored-in-frontend-public-assets-generated",
-      "title": "Replace the current logo in the app header/navbar with the uploaded logo image (creative-prints-logo.dim_256x256.png) stored in frontend/public/assets/generated/.",
+      "id": "feature-allow-customers-to-place-orders-through-the-site-by-adding-products-to-a-cart-and-completing-a-checkout-flow-that-captures-customer-details-and-submits-a-store-order-to-the-backend",
+      "title": "Allow customers to place orders through the site by adding products to a cart and completing a checkout flow that captures customer details and submits a store order to the backend.",
       "reqIds": [
         "REQ-2"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-restrict-admin-panel-access-exclusively-to-the-internet-identity-principal-associated-with-lanepeevy-gmail-com-the-backend-must-verify-admin-identity-on-all-admin-operations-and-the-frontend-must-only-render-the-admin-panel-when-the-authenticated-user-is-recognized-as-admin",
+      "title": "Restrict admin panel access exclusively to the Internet Identity principal associated with lanepeevy@gmail.com. The backend must verify admin identity on all admin operations and the frontend must only render the admin panel when the authenticated user is recognized as admin.",
+      "reqIds": [
+        "REQ-3"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-build-an-admin-dashboard-with-tabs-for-products-management-and-orders-management-the-products-tab-must-allow-the-admin-to-add-edit-and-delete-3d-printed-products-with-image-upload-name-description-price-the-orders-tab-must-display-all-customer-orders-with-status-customer-details-and-the-ability-to-update-order-status",
+      "title": "Build an admin dashboard with tabs for Products management and Orders management. The Products tab must allow the admin to add, edit, and delete 3D printed products (with image upload, name, description, price). The Orders tab must display all customer orders with status, customer details, and the ability to update order status.",
+      "reqIds": [
+        "REQ-4"
       ],
       "version": 1
     }
@@ -30,13 +44,19 @@
   "new_feature_requests": [
     {
       "id": "AR-1",
-      "summary": "Fix branding: app name should display 'Creative Prints and Design' (not 'cp&d')",
+      "summary": "Admin panel for managing 3D printed products and viewing/managing orders, accessible only to lanepeevy@gmail.com via Internet Identity",
       "reqIds": [],
       "status": "pending"
     },
     {
       "id": "AR-2",
-      "summary": "Fix or implement admin access flow so admins can log in/access admin panel",
+      "summary": "Customer-facing storefront showing product images, prices, and descriptions for 3D printed products",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-3",
+      "summary": "Order placement functionality allowing customers to place orders through the site",
       "reqIds": [],
       "status": "pending"
     }
