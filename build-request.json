@@ -1,98 +1,80 @@
 {
   "kind": "build_request",
-  "title": "Full e-commerce storefront with order placement and admin panel for Creative Prints and Design",
-  "projectName": "Creative Prints and Design",
-  "priority": "high",
+  "title": "Preserve full storefront with admin access linked to lanepeevy@gmail.com",
+  "projectName": "Creative Prints",
+  "priority": "normal",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Implement a customer-facing store page that displays all 3D printed products with product images, names, descriptions, and prices fetched from the backend.",
-      "target": "frontend",
+      "text": "Retain all existing storefront features: product listings on the store page, shopping cart, checkout flow with payment proof upload, order success page, gallery page, custom order form, and home/landing page — exactly as previously implemented.",
+      "target": "both",
       "source": {
         "messageIds": [
-          "msg-10"
+          "msg-7"
         ],
         "quotes": [
-          "Yes, to the second question"
+          "I just need everything that's already in there"
         ]
       },
       "acceptanceCriteria": [
-        "Store page renders a responsive product grid",
-        "Each product card shows image, name, description, and formatted price",
-        "Products are fetched from the backend via React Query"
+        "Store page displays all products fetched from the backend",
+        "Shopping cart persists items and shows correct totals",
+        "Checkout page submits orders with optional payment proof upload",
+        "Order success page shows confirmation details",
+        "Gallery page renders all gallery items",
+        "Custom order form allows file upload and submission"
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Allow customers to place orders through the site by adding products to a cart and completing a checkout flow that captures customer details and submits a store order to the backend.",
+      "text": "Grant admin access exclusively to the Internet Identity account associated with lanepeevy@gmail.com. This account must be able to access the admin dashboard to add/edit/delete products, view and update orders, manage gallery items, and review payment confirmations.",
       "target": "both",
       "source": {
         "messageIds": [
-          "msg-10"
+          "msg-7"
         ],
         "quotes": [
-          "I want them to be able to place orders and browse products"
+          "The advent should be linked to the email that I have provided",
+          "needs to have access to ad products and everything that has already been there"
         ]
       },
       "acceptanceCriteria": [
-        "Customers can add products to a cart from the store page",
-        "A checkout page collects customer name, email, shipping address, and order details",
-        "Submitting the checkout form creates a StoreOrder record in the backend",
-        "A success confirmation is shown after order submission"
+        "Admin dashboard is accessible only when signed in with the Internet Identity linked to lanepeevy@gmail.com",
+        "Non-admin users and unauthenticated users are redirected away from the admin dashboard",
+        "Admin can add, edit, and delete products from the Products Management tab",
+        "Admin can view all orders and update their statuses from the Orders Management tab",
+        "Admin can manage gallery items from the Gallery Management tab",
+        "Admin can view payment confirmation submissions and proof images from the Payments Management tab"
       ]
     },
     {
       "id": "REQ-3",
-      "text": "Restrict admin panel access exclusively to the Internet Identity principal associated with lanepeevy@gmail.com. The backend must verify admin identity on all admin operations and the frontend must only render the admin panel when the authenticated user is recognized as admin.",
-      "target": "both",
+      "text": "Display the Creative Prints logo in the site header consistently across all pages.",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-6",
-          "msg-8"
+          "msg-5"
         ],
         "quotes": [
-          "Admin access is currently determined by email. And I want it to have my Admin access registered with lanepeevy@gmail.com",
-          "I just want to be able to add my 3d printed products look at orders, you know admin stuff"
+          "I can also use your logo (the 'Creative Prints' circular logo with the 3D printer) in the app header"
         ]
       },
       "acceptanceCriteria": [
-        "Backend exposes an isAdmin query that returns true only for the designated admin principal",
-        "Admin dashboard page checks isAdmin on load and redirects non-admins away",
-        "The admin navigation link in the header is only visible to the authenticated admin",
-        "All admin mutations (add/edit/delete product, update order status) reject calls from non-admin principals"
-      ]
-    },
-    {
-      "id": "REQ-4",
-      "text": "Build an admin dashboard with tabs for Products management and Orders management. The Products tab must allow the admin to add, edit, and delete 3D printed products (with image upload, name, description, price). The Orders tab must display all customer orders with status, customer details, and the ability to update order status.",
-      "target": "both",
-      "source": {
-        "messageIds": [
-          "msg-8"
-        ],
-        "quotes": [
-          "I just want to be able to add my 3d printed products look at orders, you know admin stuff"
-        ]
-      },
-      "acceptanceCriteria": [
-        "Admin dashboard has at minimum a Products tab and an Orders tab",
-        "Products tab lists all products and provides add/edit/delete dialogs with image upload",
-        "Orders tab lists all store orders with customer name, items ordered, total, and current status",
-        "Admin can update the status of an order (e.g., Pending → Processing → Shipped → Completed)",
-        "All changes persist in the backend canister state"
+        "Creative Prints logo appears in the sticky header on every page",
+        "Logo is properly sized and does not break the header layout on mobile or desktop"
       ]
     }
   ],
   "constraints": [
-    "Admin access must be gated by Internet Identity principal, not a manually entered email field",
-    "All backend logic must remain in a single Motoko actor (backend/main.mo)",
-    "Do not modify files listed in frontend.immutablePaths"
+    "Admin authentication must use Internet Identity only — no traditional email/password login system",
+    "The guaranteed admin email must remain lanepeevy@gmail.com in the backend access control",
+    "Do not remove or alter any existing data models (Product, GalleryItem, CustomOrder, StoreOrder, PaymentConfirmation, UserProfile)",
+    "All immutable frontend paths must not be modified"
   ],
   "nonGoals": [
-    "Third-party payment processing (Stripe, PayPal, etc.)",
-    "Email notification system for orders",
-    "Customer account creation or login beyond Internet Identity",
-    "Multi-admin support — only lanepeevy@gmail.com is admin"
+    "Adding new features beyond what was previously implemented",
+    "Implementing email/password authentication",
+    "Adding new product categories or featured items section unless already present"
   ],
   "imageRequirements": {
     "required": [],

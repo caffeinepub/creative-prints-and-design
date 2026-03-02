@@ -17,6 +17,8 @@ actor {
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
 
+  let GUARANTEED_ADMIN_EMAIL = "lanepeevy@gmail.com";
+
   let emailToPrincipal = Map.empty<Text, Principal>();
   let userProfiles = Map.empty<Principal, UserProfile>();
   let products = Map.empty<Text, Product>();
@@ -27,7 +29,11 @@ actor {
 
   include MixinStorage();
 
-  let GUARANTEED_ADMIN_EMAIL = "lanepeevy@gmail.com";
+  public type UserProfile = {
+    email : Text;
+    name : Text;
+    isAdmin : Bool;
+  };
 
   public type UserRole = {
     #admin;
@@ -111,17 +117,6 @@ actor {
     };
   };
 
-  public type UserProfile = {
-    email : Text;
-    name : Text;
-    isAdmin : Bool;
-  };
-
-  public type RoleAssignmentResult = {
-    #success : UserRole;
-    #alreadyAssigned;
-  };
-
   public type OrderType = { #custom; #store };
 
   public type UnifiedOrder = {
@@ -145,40 +140,42 @@ actor {
     Text.equal(email.toLower(), GUARANTEED_ADMIN_EMAIL);
   };
 
-  func isCallerGuaranteedAdmin(caller : Principal) : Bool {
-    switch (userProfiles.get(caller)) {
-      case (?profile) { isAdminEmail(profile.email) };
-      case (null) {
-        for ((email, principal) in emailToPrincipal.entries()) {
-          if (Principal.equal(principal, caller) and isAdminEmail(email)) {
-            return true;
-          };
-        };
-        false;
-      };
-    };
-  };
-
-  // Bootstrap the guaranteed admin using AccessControl.initialize.
-  // initialize sets the first caller as admin in the access control state.
+  // Bootstrap the guaranteed admin principal into the AccessControl system.
+  // This is only called from update calls, never from query calls.
   func bootstrapGuaranteedAdmin(caller : Principal) {
     // Pass dummy Text values for the unused tokens
     AccessControl.initialize(accessControlState, caller, "", "");
-    let profile : UserProfile = {
+
+    let adminProfile : UserProfile = {
       email = GUARANTEED_ADMIN_EMAIL;
       name = "Admin";
       isAdmin = true;
     };
-    userProfiles.add(caller, profile);
+
+    userProfiles.add(caller, adminProfile);
     emailToPrincipal.add(GUARANTEED_ADMIN_EMAIL, caller);
   };
 
-  func requireAdmin(caller : Principal) {
+  // Check if caller is the guaranteed admin based on their registered profile.
+  // Only returns true if the caller has a profile with the admin email AND
+  // that profile was registered by this exact principal.
+  func isCallerGuaranteedAdminByProfile(caller : Principal) : Bool {
+    switch (userProfiles.get(caller)) {
+      case (?profile) { isAdminEmail(profile.email) };
+      case (null) { false };
+    };
+  };
+
+  // requireAdmin for use in UPDATE calls only.
+  // Will attempt to bootstrap the guaranteed admin if they have a registered profile
+  // but haven't been initialized in AccessControl yet.
+  func requireAdminUpdate(caller : Principal) {
     if (AccessControl.isAdmin(accessControlState, caller)) {
       return;
     };
 
-    if (isCallerGuaranteedAdmin(caller)) {
+    // If the caller has a profile with the admin email, bootstrap them as admin.
+    if (isCallerGuaranteedAdminByProfile(caller)) {
       bootstrapGuaranteedAdmin(caller);
       return;
     };
@@ -186,68 +183,33 @@ actor {
     Runtime.trap("Unauthorized: Only admins can perform this action");
   };
 
-  func getCallerUserProfileInternal(caller : Principal) : ?UserProfile {
-    userProfiles.get(caller);
-  };
-
-  func getUserProfileInternal(user : Principal) : ?UserProfile {
-    userProfiles.get(user);
-  };
-
-  public shared ({ caller }) func verifyAndEnsureAdminStatus() : async Bool {
-    if (AccessControl.isAdmin(accessControlState, caller)) {
-      return true;
-    };
-
-    if (isCallerGuaranteedAdmin(caller)) {
-      bootstrapGuaranteedAdmin(caller);
-      return true;
-    };
-
-    false;
-  };
-
-  public shared ({ caller }) func registerUserProfile(email : Text, name : Text) : async () {
-    let normalizedEmail = email.toLower();
-    let isGuaranteedAdmin = isAdminEmail(normalizedEmail);
-
-    let profile : UserProfile = {
-      email = normalizedEmail;
-      name;
-      isAdmin = isGuaranteedAdmin;
-    };
-
-    userProfiles.add(caller, profile);
-    emailToPrincipal.add(normalizedEmail, caller);
-
-    if (isGuaranteedAdmin) {
-      bootstrapGuaranteedAdmin(caller);
-    } else {
-      ignore caller;
+  // requireAdmin for use in QUERY calls only.
+  // Cannot modify state, so only checks AccessControl.
+  func requireAdminQuery(caller : Principal) {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Only admins can perform this action");
     };
   };
 
-  public query ({ caller }) func getPrincipalByEmail(email : Text) : async ?Principal {
-    requireAdmin(caller);
-    emailToPrincipal.get(email.toLower());
-  };
+  // === User Profile Management ===
 
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
-    getCallerUserProfileInternal(caller);
+    userProfiles.get(caller);
   };
 
   public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
     if (caller != user) {
-      requireAdmin(caller);
+      requireAdminQuery(caller);
     };
-    getUserProfileInternal(user);
+    userProfiles.get(user);
   };
 
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
     let normalizedEmail = profile.email.toLower();
-    let isGuaranteedAdmin = isAdminEmail(normalizedEmail);
 
-    let actualIsAdmin = isGuaranteedAdmin;
+    // Prevent non-admin users from self-assigning admin status.
+    // isAdmin flag is derived from the email, not from the caller's input.
+    let actualIsAdmin = isAdminEmail(normalizedEmail);
 
     let normalizedProfile : UserProfile = {
       email = normalizedEmail;
@@ -263,8 +225,51 @@ actor {
     };
   };
 
+  // Register a user profile with email and name.
+  // If the email matches the guaranteed admin email, the caller is bootstrapped as admin.
+  public shared ({ caller }) func registerUserProfile(email : Text, name : Text) : async () {
+    let normalizedEmail = email.toLower();
+    let actualIsAdmin = isAdminEmail(normalizedEmail);
+
+    let profile : UserProfile = {
+      email = normalizedEmail;
+      name;
+      isAdmin = actualIsAdmin;
+    };
+
+    userProfiles.add(caller, profile);
+    emailToPrincipal.add(normalizedEmail, caller);
+
+    if (actualIsAdmin) {
+      bootstrapGuaranteedAdmin(caller);
+    };
+  };
+
+  // Verify and ensure admin status for the caller.
+  // Returns true if the caller is an admin after this call.
+  public shared ({ caller }) func verifyAndEnsureAdminStatus() : async Bool {
+    if (AccessControl.isAdmin(accessControlState, caller)) {
+      return true;
+    };
+
+    if (isCallerGuaranteedAdminByProfile(caller)) {
+      bootstrapGuaranteedAdmin(caller);
+      return true;
+    };
+
+    false;
+  };
+
+  // Admin-only: look up a principal by email.
+  public query ({ caller }) func getPrincipalByEmail(email : Text) : async ?Principal {
+    requireAdminQuery(caller);
+    emailToPrincipal.get(email.toLower());
+  };
+
+  // === Product Management ===
+
   public shared ({ caller }) func addProduct(id : Text, name : Text, description : Text, price : Nat, image : Storage.ExternalBlob) : async () {
-    requireAdmin(caller);
+    requireAdminUpdate(caller);
     if (products.containsKey(id)) { Runtime.trap("Product with this id already exists.") };
 
     let product : Product = {
@@ -279,7 +284,7 @@ actor {
   };
 
   public shared ({ caller }) func updateProduct(id : Text, name : Text, description : Text, price : Nat, image : Storage.ExternalBlob) : async () {
-    requireAdmin(caller);
+    requireAdminUpdate(caller);
     if (not products.containsKey(id)) { Runtime.trap("Product does not exist") };
 
     let product : Product = {
@@ -294,7 +299,7 @@ actor {
   };
 
   public shared ({ caller }) func deleteProduct(id : Text) : async () {
-    requireAdmin(caller);
+    requireAdminUpdate(caller);
     if (not products.containsKey(id)) { Runtime.trap("Product does not exist") };
     products.remove(id);
   };
@@ -310,8 +315,10 @@ actor {
     products.values().toArray().sort();
   };
 
+  // === Gallery Management ===
+
   public shared ({ caller }) func addGalleryItem(id : Text, title : Text, description : Text, image : Storage.ExternalBlob) : async () {
-    requireAdmin(caller);
+    requireAdminUpdate(caller);
     if (galleryItems.containsKey(id)) { Runtime.trap("Item with this id already exists.") };
 
     let item : GalleryItem = {
@@ -325,7 +332,7 @@ actor {
   };
 
   public shared ({ caller }) func updateGalleryItem(id : Text, title : Text, description : Text, image : Storage.ExternalBlob) : async () {
-    requireAdmin(caller);
+    requireAdminUpdate(caller);
     if (not galleryItems.containsKey(id)) { Runtime.trap("Gallery item does not exist") };
 
     let item : GalleryItem = {
@@ -339,7 +346,7 @@ actor {
   };
 
   public shared ({ caller }) func deleteGalleryItem(id : Text) : async () {
-    requireAdmin(caller);
+    requireAdminUpdate(caller);
     if (not galleryItems.containsKey(id)) { Runtime.trap("Gallery item does not exist") };
     galleryItems.remove(id);
   };
@@ -354,6 +361,8 @@ actor {
   public query func getAllGalleryItems() : async [GalleryItem] {
     galleryItems.values().toArray().sort();
   };
+
+  // === Order Submission (public, no auth required) ===
 
   public shared (_) func submitCustomOrder(id : Text, name : Text, email : ?Text, phone : ?Text, description : Text, modelFile : ?Storage.ExternalBlob) : async () {
     if (customOrders.containsKey(id)) { Runtime.trap("Order with this id already exists") };
@@ -415,7 +424,7 @@ actor {
   };
 
   public shared ({ caller }) func updateStoreOrderStatus(id : Text, status : Text) : async () {
-    requireAdmin(caller);
+    requireAdminUpdate(caller);
     switch (storeOrders.get(id)) {
       case (null) { Runtime.trap("Order does not exist") };
       case (?order) {
@@ -451,18 +460,20 @@ actor {
     paymentConfirmations.add(id, confirmation);
   };
 
+  // === Admin Order/Confirmation Queries ===
+
   public query ({ caller }) func getAllCustomOrders() : async [CustomOrder] {
-    requireAdmin(caller);
+    requireAdminQuery(caller);
     customOrders.values().toArray().sort();
   };
 
   public query ({ caller }) func getAllStoreOrders() : async [StoreOrder] {
-    requireAdmin(caller);
+    requireAdminQuery(caller);
     storeOrders.values().toArray().sort();
   };
 
   public query ({ caller }) func getAllUnifiedOrders() : async [UnifiedOrder] {
-    requireAdmin(caller);
+    requireAdminQuery(caller);
 
     let customOrdersArray = customOrders.values().toArray();
     let storeOrdersArray = storeOrders.values().toArray();
@@ -513,7 +524,7 @@ actor {
   };
 
   public query ({ caller }) func getAllPaymentConfirmations() : async [PaymentConfirmation] {
-    requireAdmin(caller);
+    requireAdminQuery(caller);
     paymentConfirmations.values().toArray().sort();
   };
 };

@@ -1,77 +1,72 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-03-02T22:36:41.815Z",
+  "generatedAt": "2026-03-02T23:40:08.819Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 4,
-    "implemented": 4,
+    "total": 3,
+    "implemented": 3,
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Implement a customer-facing store page that displays all 3D printed products with product images, names, descriptions, and prices fetched from the backend.",
+        "summary": "Retain all existing storefront features: product listings on the store page, shopping cart, checkout flow with payment proof upload, order success page, gallery page, custom order form, and home/landing page — exactly as previously implemented.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/pages/StorePage.tsx"
+          "frontend/src/pages/StorePage.tsx",
+          "frontend/src/hooks/useCart.ts",
+          "frontend/src/pages/CheckoutPage.tsx",
+          "frontend/src/pages/OrderSuccessPage.tsx",
+          "frontend/src/pages/GalleryPage.tsx",
+          "frontend/src/pages/CustomOrderPage.tsx",
+          "frontend/src/pages/HomePage.tsx",
+          "frontend/src/components/Layout.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/pages/StorePage.tsx"
+          "frontend/src/pages/StorePage.tsx",
+          "frontend/src/hooks/useCart.ts",
+          "frontend/src/pages/CheckoutPage.tsx",
+          "frontend/src/pages/OrderSuccessPage.tsx",
+          "frontend/src/pages/GalleryPage.tsx",
+          "frontend/src/pages/CustomOrderPage.tsx",
+          "frontend/src/pages/HomePage.tsx",
+          "frontend/src/components/Layout.tsx"
         ]
       },
       {
         "id": "REQ-2",
-        "summary": "Allow customers to place orders through the site by adding products to a cart and completing a checkout flow that captures customer details and submits a store order to the backend.",
+        "summary": "Grant admin access exclusively to the Internet Identity account associated with lanepeevy@gmail.com. This account must be able to access the admin dashboard to add/edit/delete products, view and update orders, manage gallery items, and review payment confirmations.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/hooks/useCart.ts",
-          "frontend/src/pages/StorePage.tsx",
-          "frontend/src/pages/CheckoutPage.tsx",
-          "frontend/src/pages/OrderSuccessPage.tsx",
-          "frontend/src/App.tsx",
-          "frontend/src/components/Layout.tsx"
+          "frontend/src/pages/AdminDashboard.tsx",
+          "frontend/src/components/admin/ProductsManagement.tsx",
+          "frontend/src/components/admin/OrdersManagement.tsx",
+          "frontend/src/components/admin/GalleryManagement.tsx",
+          "frontend/src/components/admin/PaymentsManagement.tsx",
+          "frontend/src/components/Layout.tsx",
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/hooks/useInternetIdentity.ts"
         ],
         "matchedFiles": [
-          "frontend/src/hooks/useCart.ts",
-          "frontend/src/pages/StorePage.tsx",
-          "frontend/src/pages/CheckoutPage.tsx",
-          "frontend/src/pages/OrderSuccessPage.tsx",
-          "frontend/src/App.tsx",
-          "frontend/src/components/Layout.tsx"
+          "frontend/src/pages/AdminDashboard.tsx",
+          "frontend/src/components/admin/ProductsManagement.tsx",
+          "frontend/src/components/admin/OrdersManagement.tsx",
+          "frontend/src/components/admin/GalleryManagement.tsx",
+          "frontend/src/components/Layout.tsx",
+          "frontend/src/hooks/useQueries.ts"
         ]
       },
       {
         "id": "REQ-3",
-        "summary": "Restrict admin panel access exclusively to the Internet Identity principal associated with lanepeevy@gmail.com. The backend must verify admin identity on all admin operations and the frontend must only render the admin panel when the authenticated user is recognized as admin.",
+        "summary": "Display the Creative Prints logo in the site header consistently across all pages.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/pages/AdminDashboard.tsx",
           "frontend/src/components/Layout.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/pages/AdminDashboard.tsx",
           "frontend/src/components/Layout.tsx"
-        ]
-      },
-      {
-        "id": "REQ-4",
-        "summary": "Build an admin dashboard with tabs for Products management and Orders management. The Products tab must allow the admin to add, edit, and delete 3D printed products (with image upload, name, description, price). The Orders tab must display all customer orders with status, customer details, and the ability to update order status.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/components/admin/ProductsManagement.tsx",
-          "frontend/src/components/admin/OrdersManagement.tsx",
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/pages/AdminDashboard.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/components/admin/ProductsManagement.tsx",
-          "frontend/src/components/admin/OrdersManagement.tsx",
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/pages/AdminDashboard.tsx"
         ]
       }
     ]
@@ -84,17 +79,17 @@
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
     "frontend/src/App.tsx",
-    "frontend/src/backend.d.ts",
-    "frontend/src/backend.ts",
     "frontend/src/components/Layout.tsx",
+    "frontend/src/components/admin/GalleryManagement.tsx",
     "frontend/src/components/admin/OrdersManagement.tsx",
     "frontend/src/components/admin/ProductsManagement.tsx",
-    "frontend/src/declarations/backend.did.d.ts",
-    "frontend/src/declarations/backend.did.js",
     "frontend/src/hooks/useCart.ts",
     "frontend/src/hooks/useQueries.ts",
     "frontend/src/pages/AdminDashboard.tsx",
     "frontend/src/pages/CheckoutPage.tsx",
+    "frontend/src/pages/CustomOrderPage.tsx",
+    "frontend/src/pages/GalleryPage.tsx",
+    "frontend/src/pages/HomePage.tsx",
     "frontend/src/pages/OrderSuccessPage.tsx",
     "frontend/src/pages/StorePage.tsx",
     "project_state.json",

@@ -1,346 +1,342 @@
 import { useState } from 'react';
 import { useGetAllGalleryItems, useAddGalleryItem, useUpdateGalleryItem, useDeleteGalleryItem } from '../../hooks/useQueries';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ExternalBlob } from '../../backend';
+import type { GalleryItem } from '../../backend';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Plus, Edit, Trash2 } from 'lucide-react';
-import { ExternalBlob } from '../../backend';
-import type { GalleryItem } from '../../backend';
+import { Card, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Plus, Pencil, Trash2, Loader2, Upload, FileCheck, Images } from 'lucide-react';
 import { toast } from 'sonner';
 
+interface GalleryFormData {
+  title: string;
+  description: string;
+  imageFile: File | null;
+  existingImageUrl?: string;
+}
+
+const defaultForm: GalleryFormData = {
+  title: '',
+  description: '',
+  imageFile: null,
+};
+
 export default function GalleryManagement() {
-  const { data: galleryItems, isLoading } = useGetAllGalleryItems();
-  const addGalleryItem = useAddGalleryItem();
-  const updateGalleryItem = useUpdateGalleryItem();
-  const deleteGalleryItem = useDeleteGalleryItem();
+  const { data: items, isLoading } = useGetAllGalleryItems();
+  const addItem = useAddGalleryItem();
+  const updateItem = useUpdateGalleryItem();
+  const deleteItem = useDeleteGalleryItem();
 
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<GalleryItem | null>(null);
-
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-  });
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [form, setForm] = useState<GalleryFormData>(defaultForm);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const resetForm = () => {
-    setFormData({ title: '', description: '' });
-    setImageFile(null);
+  const openAddDialog = () => {
+    setEditingItem(null);
+    setForm(defaultForm);
     setUploadProgress(0);
-  };
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setImageFile(e.target.files[0]);
-    }
-  };
-
-  const handleAdd = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!imageFile) {
-      toast.error('Please select an image');
-      return;
-    }
-
-    try {
-      const imageBytes = new Uint8Array(await imageFile.arrayBuffer());
-      const imageBlob = ExternalBlob.fromBytes(imageBytes).withUploadProgress((percentage) => {
-        setUploadProgress(percentage);
-      });
-
-      await addGalleryItem.mutateAsync({
-        id: `gallery-${Date.now()}`,
-        title: formData.title,
-        description: formData.description,
-        image: imageBlob,
-      });
-
-      toast.success('Gallery item added successfully');
-      setIsAddDialogOpen(false);
-      resetForm();
-    } catch (error: any) {
-      console.error('Failed to add gallery item:', error);
-      const errorMessage = error?.message || 'Failed to add gallery item';
-      toast.error(errorMessage);
-    }
-  };
-
-  const handleEdit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingItem) return;
-
-    try {
-      let imageBlob = editingItem.image;
-      
-      if (imageFile) {
-        const imageBytes = new Uint8Array(await imageFile.arrayBuffer());
-        imageBlob = ExternalBlob.fromBytes(imageBytes).withUploadProgress((percentage) => {
-          setUploadProgress(percentage);
-        });
-      }
-
-      await updateGalleryItem.mutateAsync({
-        id: editingItem.id,
-        title: formData.title,
-        description: formData.description,
-        image: imageBlob,
-      });
-
-      toast.success('Gallery item updated successfully');
-      setIsEditDialogOpen(false);
-      setEditingItem(null);
-      resetForm();
-    } catch (error: any) {
-      console.error('Failed to update gallery item:', error);
-      const errorMessage = error?.message || 'Failed to update gallery item';
-      toast.error(errorMessage);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this gallery item?')) return;
-
-    try {
-      await deleteGalleryItem.mutateAsync(id);
-      toast.success('Gallery item deleted successfully');
-    } catch (error: any) {
-      console.error('Failed to delete gallery item:', error);
-      const errorMessage = error?.message || 'Failed to delete gallery item';
-      toast.error(errorMessage);
-    }
+    setDialogOpen(true);
   };
 
   const openEditDialog = (item: GalleryItem) => {
     setEditingItem(item);
-    setFormData({
+    setForm({
       title: item.title,
       description: item.description,
+      imageFile: null,
+      existingImageUrl: item.image.getDirectURL(),
     });
-    setIsEditDialogOpen(true);
+    setUploadProgress(0);
+    setDialogOpen(true);
   };
 
-  if (isLoading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </CardContent>
-      </Card>
-    );
-  }
+  const openDeleteDialog = (id: string) => {
+    setDeletingId(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!form.title.trim()) {
+      toast.error('Please enter a title');
+      return;
+    }
+
+    if (!editingItem && !form.imageFile) {
+      toast.error('Please upload an image');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setUploadProgress(0);
+
+      let imageBlob: ExternalBlob;
+
+      if (form.imageFile) {
+        const bytes = new Uint8Array(await form.imageFile.arrayBuffer());
+        imageBlob = ExternalBlob.fromBytes(bytes).withUploadProgress((pct) => {
+          setUploadProgress(pct);
+        });
+      } else if (editingItem) {
+        imageBlob = editingItem.image;
+      } else {
+        toast.error('Image is required');
+        return;
+      }
+
+      if (editingItem) {
+        await updateItem.mutateAsync({
+          id: editingItem.id,
+          title: form.title.trim(),
+          description: form.description.trim(),
+          image: imageBlob,
+        });
+        toast.success('Gallery item updated');
+      } else {
+        const id = `gallery-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        await addItem.mutateAsync({
+          id,
+          title: form.title.trim(),
+          description: form.description.trim(),
+          image: imageBlob,
+        });
+        toast.success('Gallery item added');
+      }
+
+      setDialogOpen(false);
+      setForm(defaultForm);
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to save gallery item');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deletingId) return;
+    try {
+      await deleteItem.mutateAsync(deletingId);
+      toast.success('Gallery item deleted');
+      setDeleteDialogOpen(false);
+      setDeletingId(null);
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to delete gallery item');
+    }
+  };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Gallery Management</CardTitle>
-            <CardDescription>Add, edit, or delete gallery items</CardDescription>
-          </div>
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={resetForm}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Item
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Add New Gallery Item</DialogTitle>
-                <DialogDescription>Fill in the details to add a new gallery item</DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleAdd} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="add-title">Title</Label>
-                  <Input
-                    id="add-title"
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="add-description">Description</Label>
-                  <Textarea
-                    id="add-description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    required
-                    rows={3}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="add-image">Image</Label>
-                  <Input
-                    id="add-image"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    required
-                  />
-                </div>
-                {uploadProgress > 0 && uploadProgress < 100 && (
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Uploading...</span>
-                      <span>{uploadProgress}%</span>
-                    </div>
-                    <div className="w-full bg-secondary rounded-full h-2">
-                      <div
-                        className="bg-primary h-2 rounded-full transition-all"
-                        style={{ width: `${uploadProgress}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={addGalleryItem.isPending || !imageFile}>
-                    {addGalleryItem.isPending ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Adding...
-                      </>
-                    ) : (
-                      'Add Item'
-                    )}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-foreground">Gallery</h2>
+          <p className="text-sm text-muted-foreground">
+            {items?.length ?? 0} item{(items?.length ?? 0) !== 1 ? 's' : ''}
+          </p>
         </div>
-      </CardHeader>
-      <CardContent>
-        {galleryItems && galleryItems.length > 0 ? (
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Image</TableHead>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {galleryItems.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>
-                      <img
-                        src={item.image.getDirectURL()}
-                        alt={item.title}
-                        className="h-12 w-12 object-cover rounded"
-                      />
-                    </TableCell>
-                    <TableCell className="font-medium">{item.title}</TableCell>
-                    <TableCell className="max-w-xs truncate">{item.description}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openEditDialog(item)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDelete(item.id)}
-                          disabled={deleteGalleryItem.isPending}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        ) : (
-          <div className="text-center py-12 text-muted-foreground">
-            No gallery items yet. Add your first item to get started.
-          </div>
-        )}
-      </CardContent>
+        <Button onClick={openAddDialog} className="gap-2">
+          <Plus className="h-4 w-4" />
+          Add Item
+        </Button>
+      </div>
 
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      {isLoading && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i}>
+              <Skeleton className="aspect-square w-full rounded-t-lg" />
+              <CardContent className="p-4 space-y-2">
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-4 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {!isLoading && (!items || items.length === 0) && (
+        <div className="text-center py-16 space-y-3">
+          <div className="flex justify-center">
+            <div className="p-4 rounded-full bg-muted">
+              <Images className="h-10 w-10 text-muted-foreground" />
+            </div>
+          </div>
+          <p className="text-muted-foreground">No gallery items yet. Add your first item!</p>
+        </div>
+      )}
+
+      {!isLoading && items && items.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {items.map((item) => (
+            <Card key={item.id} className="overflow-hidden">
+              <div className="aspect-square overflow-hidden bg-muted">
+                <img
+                  src={item.image.getDirectURL()}
+                  alt={item.title}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/assets/generated/sample-prototype.dim_400x400.jpg';
+                  }}
+                />
+              </div>
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-foreground truncate">{item.title}</h3>
+                    {item.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-2">{item.description}</p>
+                    )}
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => openEditDialog(item)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={() => openDeleteDialog(item.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Add/Edit Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Edit Gallery Item</DialogTitle>
-            <DialogDescription>Update the gallery item details</DialogDescription>
+            <DialogTitle>{editingItem ? 'Edit Gallery Item' : 'Add Gallery Item'}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleEdit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-title">Title</Label>
+              <Label htmlFor="gallery-title">Title *</Label>
               <Input
-                id="edit-title"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                id="gallery-title"
+                placeholder="e.g. Dragon Figurine"
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-description">Description</Label>
+              <Label htmlFor="gallery-desc">Description</Label>
               <Textarea
-                id="edit-description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                required
+                id="gallery-desc"
+                placeholder="Describe this piece..."
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
                 rows={3}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-image">Image (optional - leave empty to keep current)</Label>
-              <Input
-                id="edit-image"
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-              />
-            </div>
-            {uploadProgress > 0 && uploadProgress < 100 && (
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Uploading...</span>
-                  <span>{uploadProgress}%</span>
-                </div>
-                <div className="w-full bg-secondary rounded-full h-2">
-                  <div
-                    className="bg-primary h-2 rounded-full transition-all"
-                    style={{ width: `${uploadProgress}%` }}
+              <Label htmlFor="gallery-image">
+                Image {editingItem ? '(leave empty to keep current)' : '*'}
+              </Label>
+              {form.existingImageUrl && !form.imageFile && (
+                <div className="rounded-lg overflow-hidden border border-border h-32">
+                  <img
+                    src={form.existingImageUrl}
+                    alt="Current"
+                    className="w-full h-full object-cover"
                   />
                 </div>
+              )}
+              <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary/50 transition-colors">
+                <input
+                  id="gallery-image"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setForm({ ...form, imageFile: e.target.files?.[0] ?? null })}
+                  className="hidden"
+                />
+                <label htmlFor="gallery-image" className="cursor-pointer">
+                  {form.imageFile ? (
+                    <div className="flex items-center justify-center gap-2 text-primary">
+                      <FileCheck className="h-5 w-5" />
+                      <span className="text-sm font-medium">{form.imageFile.name}</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <Upload className="h-6 w-6 text-muted-foreground mx-auto" />
+                      <p className="text-sm text-muted-foreground">Click to upload image</p>
+                    </div>
+                  )}
+                </label>
               </div>
-            )}
+              {isSubmitting && uploadProgress > 0 && (
+                <div className="space-y-1">
+                  <Progress value={uploadProgress} className="h-2" />
+                  <p className="text-xs text-muted-foreground text-right">{uploadProgress}%</p>
+                </div>
+              )}
+            </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={updateGalleryItem.isPending}>
-                {updateGalleryItem.isPending ? (
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Updating...
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Saving...
                   </>
-                ) : (
+                ) : editingItem ? (
                   'Update Item'
+                ) : (
+                  'Add Item'
                 )}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
-    </Card>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Gallery Item</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this gallery item? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteItem.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                'Delete'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }

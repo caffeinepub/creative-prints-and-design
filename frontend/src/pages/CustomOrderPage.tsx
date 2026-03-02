@@ -1,304 +1,247 @@
 import { useState } from 'react';
-import { useAuth } from '../hooks/useAuth';
+import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import { useSubmitCustomOrder } from '../hooks/useQueries';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ExternalBlob } from '../backend';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { CheckCircle2, Upload, Loader2, AlertCircle, LogIn } from 'lucide-react';
-import { ExternalBlob } from '../backend';
+import { Loader2, Upload, FileCheck, AlertCircle, LogIn } from 'lucide-react';
 import { toast } from 'sonner';
-import AuthDialog from '../components/AuthDialog';
 
 export default function CustomOrderPage() {
-  const { isAuthenticated } = useAuth();
-  const [authDialogOpen, setAuthDialogOpen] = useState(false);
+  const { identity, login, loginStatus } = useInternetIdentity();
+  const isAuthenticated = !!identity;
+  const isLoggingIn = loginStatus === 'logging-in';
+
   const submitOrder = useSubmitCustomOrder();
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [description, setDescription] = useState('');
-  const [file, setFile] = useState<File | null>(null);
+  const [modelFile, setModelFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [submitted, setSubmitted] = useState(false);
-  const [contactError, setContactError] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      const validExtensions = ['.stl', '.obj'];
-      const fileExtension = selectedFile.name.toLowerCase().slice(selectedFile.name.lastIndexOf('.'));
-      
-      if (!validExtensions.includes(fileExtension)) {
-        toast.error('Invalid file type', {
-          description: 'Please upload a .stl or .obj file',
-        });
-        return;
-      }
-      
-      setFile(selectedFile);
+    const file = e.target.files?.[0];
+    if (file) {
+      setModelFile(file);
     }
-  };
-
-  const validateContactInfo = (): boolean => {
-    const hasEmail = email.trim().length > 0;
-    const hasPhone = phone.trim().length > 0;
-
-    if (!hasEmail && !hasPhone) {
-      setContactError('Please provide at least one contact method (email or phone number)');
-      return false;
-    }
-
-    setContactError('');
-    return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!isAuthenticated) {
-      toast.error('Authentication required', {
-        description: 'Please log in to submit a custom order',
-      });
-      setAuthDialogOpen(true);
+    if (!name.trim()) {
+      toast.error('Please enter your name');
       return;
     }
 
-    if (!validateContactInfo()) {
+    const hasEmail = email.trim().length > 0;
+    const hasPhone = phone.trim().length > 0;
+
+    if (!hasEmail && !hasPhone) {
+      toast.error('Please provide at least one contact method (email or phone)');
+      return;
+    }
+
+    if (!description.trim()) {
+      toast.error('Please describe your project');
       return;
     }
 
     try {
-      let blob: ExternalBlob | null = null;
-      
-      if (file) {
-        const fileBytes = new Uint8Array(await file.arrayBuffer());
-        blob = ExternalBlob.fromBytes(fileBytes).withUploadProgress((percentage) => {
-          setUploadProgress(percentage);
+      setIsUploading(true);
+      let blobFile: ExternalBlob | null = null;
+
+      if (modelFile) {
+        const bytes = new Uint8Array(await modelFile.arrayBuffer());
+        blobFile = ExternalBlob.fromBytes(bytes).withUploadProgress((pct) => {
+          setUploadProgress(pct);
         });
       }
 
+      const orderId = `order-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
       await submitOrder.mutateAsync({
-        id: `order-${Date.now()}`,
-        name,
-        email: email.trim() || null,
-        phone: phone.trim() || null,
-        description,
-        modelFile: blob,
+        id: orderId,
+        name: name.trim(),
+        email: hasEmail ? email.trim() : null,
+        phone: hasPhone ? phone.trim() : null,
+        description: description.trim(),
+        modelFile: blobFile,
       });
 
-      setSubmitted(true);
-      toast.success('Order submitted successfully!', {
-        description: 'We will contact you soon regarding your custom order.',
-      });
-
+      toast.success('Custom order submitted successfully! We\'ll be in touch soon.');
       setName('');
       setEmail('');
       setPhone('');
       setDescription('');
-      setFile(null);
+      setModelFile(null);
       setUploadProgress(0);
-      setContactError('');
-    } catch (error: any) {
-      console.error('Failed to submit order:', error);
-      toast.error('Failed to submit order', {
-        description: error.message || 'Please try again later.',
-      });
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to submit order. Please try again.');
+    } finally {
+      setIsUploading(false);
     }
   };
 
-  if (submitted) {
+  if (!isAuthenticated) {
     return (
-      <div className="container mx-auto px-4 py-16">
-        <Card className="max-w-2xl mx-auto">
-          <CardContent className="pt-6">
-            <div className="text-center space-y-4">
-              <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto" />
-              <h2 className="text-2xl font-bold">Order Submitted Successfully!</h2>
-              <p className="text-muted-foreground">
-                Thank you for your custom order. We will review your design and contact you soon with a quote and timeline.
-              </p>
-              <Button onClick={() => setSubmitted(false)} className="mt-4">
-                Submit Another Order
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="max-w-lg mx-auto px-4 py-20 text-center space-y-6">
+        <div className="flex justify-center">
+          <div className="p-4 rounded-full bg-primary/10">
+            <LogIn className="h-12 w-12 text-primary" />
+          </div>
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Sign In Required</h1>
+          <p className="text-muted-foreground mt-2">
+            Please sign in to submit a custom order request.
+          </p>
+        </div>
+        <Button onClick={login} disabled={isLoggingIn} size="lg" className="w-full">
+          {isLoggingIn ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              Signing in...
+            </>
+          ) : (
+            'Sign In with Internet Identity'
+          )}
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-16">
-      <div className="max-w-2xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-4">Custom 3D Printing Order</h1>
-          <p className="text-lg text-muted-foreground">
-            Tell us about your project. You can upload a 3D model or simply describe your idea.
-          </p>
-        </div>
-
-        {!isAuthenticated && (
-          <Alert className="mb-6">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription className="flex items-center justify-between">
-              <span>You must be logged in to submit a custom order.</span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setAuthDialogOpen(true)}
-              >
-                <LogIn className="h-4 w-4 mr-2" />
-                Login
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Order Details</CardTitle>
-            <CardDescription>
-              Fill out the form below with your project details. Uploading a 3D model file is optional - you can describe your idea instead.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="name">Your Name *</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder="John Doe"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <AlertCircle className="h-4 w-4" />
-                  <span>Please provide at least one contact method (email or phone number)</span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email Address</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="john@example.com"
-                      value={email}
-                      onChange={(e) => {
-                        setEmail(e.target.value);
-                        if (contactError) setContactError('');
-                      }}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      placeholder="(555) 123-4567"
-                      value={phone}
-                      onChange={(e) => {
-                        setPhone(e.target.value);
-                        if (contactError) setContactError('');
-                      }}
-                    />
-                  </div>
-                </div>
-
-                {contactError && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{contactError}</AlertDescription>
-                  </Alert>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Project Description *</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Describe your project in detail, including size requirements, material preferences, color, quantity, and any special instructions. If you don't have a 3D model file, describe what you'd like us to create..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={6}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="file">3D Model File (Optional)</Label>
-                <div className="flex items-center gap-4">
-                  <Input
-                    id="file"
-                    type="file"
-                    accept=".stl,.obj"
-                    onChange={handleFileChange}
-                    className="cursor-pointer"
-                  />
-                  {file && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Upload className="h-4 w-4" />
-                      {file.name}
-                    </div>
-                  )}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Optional: Upload a .stl or .obj file if you have one. Otherwise, just describe your idea in the project description above.
-                </p>
-              </div>
-
-              {uploadProgress > 0 && uploadProgress < 100 && (
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Uploading...</span>
-                    <span>{uploadProgress}%</span>
-                  </div>
-                  <Progress value={uploadProgress} />
-                </div>
-              )}
-
-              {submitOrder.isError && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    Failed to submit order. Please try again.
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              <Button
-                type="submit"
-                className="w-full"
-                size="lg"
-                disabled={submitOrder.isPending || !isAuthenticated}
-              >
-                {submitOrder.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Submitting Order...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="mr-2 h-5 w-5" />
-                    Submit Custom Order
-                  </>
-                )}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-foreground">Custom Order</h1>
+        <p className="text-muted-foreground mt-2">
+          Tell us about your project and we'll get back to you with a quote.
+        </p>
       </div>
 
-      <AuthDialog open={authDialogOpen} onOpenChange={setAuthDialogOpen} />
+      <Card>
+        <CardHeader>
+          <CardTitle>Order Details</CardTitle>
+          <CardDescription>
+            Fill in your contact information and describe what you need. Provide at least one contact method.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Name */}
+            <div className="space-y-2">
+              <Label htmlFor="name">Full Name *</Label>
+              <Input
+                id="name"
+                placeholder="Your full name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
+
+            {/* Contact */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="your@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="+1 (555) 000-0000"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
+              <AlertCircle className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
+              <span>Please provide at least one contact method (email or phone number).</span>
+            </div>
+
+            {/* Description */}
+            <div className="space-y-2">
+              <Label htmlFor="description">Project Description *</Label>
+              <Textarea
+                id="description"
+                placeholder="Describe your project in detail — dimensions, material preferences, quantity, intended use, etc."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={5}
+                required
+              />
+            </div>
+
+            {/* File Upload */}
+            <div className="space-y-2">
+              <Label htmlFor="model-file">3D Model File (Optional)</Label>
+              <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary/50 transition-colors">
+                <input
+                  id="model-file"
+                  type="file"
+                  accept=".stl,.obj,.3mf,.step,.stp"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                <label htmlFor="model-file" className="cursor-pointer">
+                  {modelFile ? (
+                    <div className="flex items-center justify-center gap-2 text-primary">
+                      <FileCheck className="h-5 w-5" />
+                      <span className="text-sm font-medium">{modelFile.name}</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <Upload className="h-8 w-8 text-muted-foreground mx-auto" />
+                      <p className="text-sm text-muted-foreground">
+                        Click to upload .STL, .OBJ, .3MF, or .STEP file
+                      </p>
+                    </div>
+                  )}
+                </label>
+              </div>
+              {isUploading && uploadProgress > 0 && (
+                <div className="space-y-1">
+                  <Progress value={uploadProgress} className="h-2" />
+                  <p className="text-xs text-muted-foreground text-right">{uploadProgress}%</p>
+                </div>
+              )}
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={submitOrder.isPending || isUploading}
+            >
+              {submitOrder.isPending || isUploading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Submitting...
+                </>
+              ) : (
+                'Submit Custom Order'
+              )}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

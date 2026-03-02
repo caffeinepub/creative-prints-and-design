@@ -1,123 +1,128 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Full e-commerce storefront with order placement and admin panel for Creative Prints and Design",
+  "title": "Preserve full storefront with admin access linked to lanepeevy@gmail.com",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Implement a customer-facing store page that displays all 3D printed products with product images, names, descriptions, and prices fetched from the backend.",
+      "summary": "Retain all existing storefront features: product listings, shopping cart, checkout flow with payment proof upload, order success page, gallery page, custom order form, and home/landing page.",
       "acceptanceCriteria": [
-        "Store page renders a responsive product grid",
-        "Each product card shows image, name, description, and formatted price",
-        "Products are fetched from the backend via React Query"
+        "Store page displays all products fetched from the backend",
+        "Shopping cart persists items and shows correct totals",
+        "Checkout page submits orders with optional payment proof upload",
+        "Order success page shows confirmation details",
+        "Gallery page renders all gallery items",
+        "Custom order form allows file upload and submission"
       ],
       "file_operations": [
         {
           "path": "frontend/src/pages/StorePage.tsx",
           "operation": "modify",
-          "description": "Update the StorePage component to fetch products using the useGetAllProducts query hook and display them in a responsive grid. Each product card must show the product image using ExternalBlob's getDirectURL() method, product name, description, and price formatted as currency (price/100). Use the blob-storage component to handle product images. Verify the component's usage instructions before implementing. Ensure proper loading states, error handling, and empty state messaging."
+          "description": "Review and ensure the store page correctly fetches products using useGetAllProducts hook, displays them in a responsive grid with add-to-cart functionality, and handles loading/error states. Verify the blob-storage component is used for product images via ExternalBlob.getDirectURL() to leverage caching."
+        },
+        {
+          "path": "frontend/src/hooks/useCart.ts",
+          "operation": "modify",
+          "description": "Review and ensure the Zustand cart store persists to localStorage, correctly calculates totals and item counts, and exposes add, remove, update quantity, and clear actions."
+        },
+        {
+          "path": "frontend/src/pages/CheckoutPage.tsx",
+          "operation": "modify",
+          "description": "Review and ensure the checkout page displays cart items, collects customer info (name, email, phone), optionally uploads payment proof via ExternalBlob.fromBytes with progress tracking, submits one store order per cart item using submitStoreOrder backend capability, clears the cart on success, and navigates to the order success page with URL params."
+        },
+        {
+          "path": "frontend/src/pages/OrderSuccessPage.tsx",
+          "operation": "modify",
+          "description": "Review and ensure the order success page reads customer name, total, and item count from URL search params (using the urlParams utility) and displays confirmation details along with next steps."
+        },
+        {
+          "path": "frontend/src/pages/GalleryPage.tsx",
+          "operation": "modify",
+          "description": "Review and ensure the gallery page fetches all gallery items using useGetAllGalleryItems hook, displays them in a responsive grid with images (using ExternalBlob.getDirectURL()), titles, and descriptions, and handles loading/empty states."
+        },
+        {
+          "path": "frontend/src/pages/CustomOrderPage.tsx",
+          "operation": "modify",
+          "description": "Review and ensure the custom order form requires authentication via Internet Identity, collects name, email, phone, description, and optionally uploads a .stl/.obj model file via ExternalBlob.fromBytes, submits using submitCustomOrder backend capability, and handles success/error states with toast notifications."
+        },
+        {
+          "path": "frontend/src/pages/HomePage.tsx",
+          "operation": "modify",
+          "description": "Review and ensure the home/landing page displays a hero section with call-to-action buttons linking to the store and custom order pages, followed by a features section highlighting key selling points of the 3D printing service."
+        },
+        {
+          "path": "frontend/src/components/Layout.tsx",
+          "operation": "modify",
+          "description": "Review and ensure the Layout component includes a sticky header with navigation links to Home, Store, Gallery, and Custom Order pages, displays the cart icon with item count (from useCart hook), shows the Admin link conditionally for authenticated admin users, and includes Internet Identity login/logout functionality."
         }
       ]
     },
     {
       "id": "REQ-2",
-      "summary": "Allow customers to place orders through the site by adding products to a cart and completing a checkout flow that captures customer details and submits a store order to the backend.",
+      "summary": "Grant admin access exclusively to the Internet Identity account associated with lanepeevy@gmail.com. This account must be able to access the admin dashboard to add/edit/delete products, view and update orders, manage gallery items, and review payment confirmations.",
       "acceptanceCriteria": [
-        "Customers can add products to a cart from the store page",
-        "A checkout page collects customer name, email, shipping address, and order details",
-        "Submitting the checkout form creates a StoreOrder record in the backend",
-        "A success confirmation is shown after order submission"
+        "Admin dashboard is accessible only when signed in with the Internet Identity linked to lanepeevy@gmail.com",
+        "Non-admin users and unauthenticated users are redirected away from the admin dashboard",
+        "Admin can add, edit, and delete products from the Products Management tab",
+        "Admin can view all orders and update their statuses from the Orders Management tab",
+        "Admin can manage gallery items from the Gallery Management tab",
+        "Admin can view payment confirmation submissions and proof images from the Payments Management tab"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/hooks/useCart.ts",
-          "operation": "create",
-          "description": "Create a Zustand store hook that manages shopping cart state with localStorage persistence. Include cart items (productId, productName, productDescription, productPrice, quantity), addToCart, removeFromCart, updateQuantity, clearCart, and computed total price. Each cart item should track the full product details needed for checkout."
-        },
-        {
-          "path": "frontend/src/pages/StorePage.tsx",
+          "path": "frontend/src/pages/AdminDashboard.tsx",
           "operation": "modify",
-          "description": "Add 'Add to Cart' button to each product card that calls the addToCart action from useCart hook. Show a toast notification on successful add. Display a cart icon in the product grid header showing item count with a link to the checkout page."
+          "description": "Review and ensure the admin dashboard verifies admin privileges using the authorization component's isCallerAdmin backend capability after Internet Identity authentication. If not authenticated or not admin, redirect to the home page. Render tabbed sections for Products Management, Orders Management, Gallery Management, and Payments Management. Use the authorization component to enforce admin-only access."
         },
         {
-          "path": "frontend/src/pages/CheckoutPage.tsx",
+          "path": "frontend/src/components/admin/ProductsManagement.tsx",
           "operation": "modify",
-          "description": "Update the CheckoutPage to display cart items from useCart hook with product details, quantities, and line totals. Add a customer details form collecting name, email, phone, and shipping address. Implement the submitStoreOrder mutation from useQueries that creates a StoreOrder for each cart item. Use the blob-storage component for optional payment proof upload via ExternalBlob.fromBytes() with withUploadProgress() for upload tracking. Verify the component's usage instructions before implementing. On successful submission, clear the cart and show a success confirmation message with order details. Handle validation errors and submission failures with appropriate user feedback."
+          "description": "Review and ensure the Products Management component displays all products in a data table with actions to add, edit, and delete products. The form dialog must support image file upload via ExternalBlob.fromBytes with upload progress tracking using the blob-storage component. Use addProduct, updateProduct, and deleteProduct backend capabilities with proper error handling and toast notifications."
         },
         {
-          "path": "frontend/src/pages/OrderSuccessPage.tsx",
-          "operation": "create",
-          "description": "Create a success confirmation page that displays order confirmation details including order number, customer name, items ordered, and total amount. Include a call-to-action button to return to the store and a message thanking the customer. This page is navigated to after successful order submission from CheckoutPage."
-        },
-        {
-          "path": "frontend/src/App.tsx",
+          "path": "frontend/src/components/admin/OrdersManagement.tsx",
           "operation": "modify",
-          "description": "Register the /order-success route in the router configuration that renders the OrderSuccessPage component. Ensure the route is publicly accessible without authentication."
+          "description": "Review and ensure the Orders Management component fetches all store orders using useGetAllStoreOrders hook, displays them in a table with status badges, and allows admins to update each order's status via a dropdown select using updateStoreOrderStatus backend capability. Include proper error handling and toast notifications."
+        },
+        {
+          "path": "frontend/src/components/admin/GalleryManagement.tsx",
+          "operation": "modify",
+          "description": "Review and ensure the Gallery Management component displays all gallery items in a data table with actions to add, edit, and delete items. The form dialog must support image file upload via ExternalBlob.fromBytes with upload progress tracking using the blob-storage component. Use addGalleryItem, updateGalleryItem, and deleteGalleryItem backend capabilities with proper error handling and toast notifications."
+        },
+        {
+          "path": "frontend/src/components/admin/PaymentsManagement.tsx",
+          "operation": "modify",
+          "description": "Review and ensure the Payments Management component fetches all payment confirmations using useGetAllPaymentConfirmations hook, displays them sorted by newest first, and provides a dialog to view the uploaded payment proof image (using ExternalBlob.getDirectURL()) for each entry. Include proper error handling."
         },
         {
           "path": "frontend/src/components/Layout.tsx",
           "operation": "modify",
-          "description": "Add a cart icon with badge showing item count in the header navigation. The cart icon should link to /checkout and use the useCart hook to display the current cart item count. Position it near the existing navigation links and ensure it's visible on both desktop and mobile viewports."
+          "description": "Review and ensure the Layout header conditionally displays the Admin Dashboard link only for authenticated users who have admin privileges. Use the useIsCallerAdmin hook (from useQueries.ts) to check admin status after Internet Identity login. The admin link should navigate to /admin."
+        },
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Review and ensure the useIsCallerAdmin hook correctly wraps the isCallerAdmin backend capability, is enabled only when the actor is available and user is authenticated, and provides proper loading/error states. This hook is used by the Layout component to conditionally show the admin link."
+        },
+        {
+          "path": "frontend/src/hooks/useInternetIdentity.ts",
+          "operation": "modify",
+          "description": "Review and ensure the Internet Identity provider and hook correctly expose login, logout functions, and the current identity/status state. Ensure logout properly clears the identity and invalidates the TanStack Query cache to prevent stale admin status checks."
         }
       ]
     },
     {
       "id": "REQ-3",
-      "summary": "Restrict admin panel access exclusively to the Internet Identity principal associated with lanepeevy@gmail.com. The backend must verify admin identity on all admin operations and the frontend must only render the admin panel when the authenticated user is recognized as admin.",
+      "summary": "Display the Creative Prints logo in the site header consistently across all pages.",
       "acceptanceCriteria": [
-        "Backend exposes an isAdmin query that returns true only for the designated admin principal",
-        "Admin dashboard page checks isAdmin on load and redirects non-admins away",
-        "The admin navigation link in the header is only visible to the authenticated admin",
-        "All admin mutations (add/edit/delete product, update order status) reject calls from non-admin principals"
+        "Creative Prints logo appears in the sticky header on every page",
+        "Logo is properly sized and does not break the header layout on mobile or desktop"
       ],
       "file_operations": [
-        {
-          "path": "frontend/src/hooks/useQueries.ts",
-          "operation": "modify",
-          "description": "Add a useIsCallerAdmin query hook that calls actor.isCallerAdmin() to determine if the current authenticated user is an admin. Use the authorization component which verifies admin status based on Internet Identity principal. This hook should be enabled only when the actor is available and the user is authenticated. Return loading, error, and isAdmin boolean states."
-        },
-        {
-          "path": "frontend/src/pages/AdminDashboard.tsx",
-          "operation": "modify",
-          "description": "Update the AdminDashboard page to use the useIsCallerAdmin query hook. If isAdmin is false after loading completes, redirect the user to the home page and show a toast notification indicating insufficient permissions. Show a loading state while checking admin status. Use the authorization component to enforce role-based access control. Verify the component's usage instructions before implementing."
-        },
         {
           "path": "frontend/src/components/Layout.tsx",
           "operation": "modify",
-          "description": "Update the header navigation to conditionally render the 'Admin' link only when the useIsCallerAdmin hook returns true. The admin link should be hidden from non-admin users and guests. Ensure the admin link is visible in both desktop and mobile navigation menus when the user is authenticated as admin."
-        }
-      ]
-    },
-    {
-      "id": "REQ-4",
-      "summary": "Build an admin dashboard with tabs for Products management and Orders management. The Products tab must allow the admin to add, edit, and delete 3D printed products (with image upload, name, description, price). The Orders tab must display all customer orders with status, customer details, and the ability to update order status.",
-      "acceptanceCriteria": [
-        "Admin dashboard has at minimum a Products tab and an Orders tab",
-        "Products tab lists all products and provides add/edit/delete dialogs with image upload",
-        "Orders tab lists all store orders with customer name, items ordered, total, and current status",
-        "Admin can update the status of an order (e.g., Pending → Processing → Shipped → Completed)",
-        "All changes persist in the backend canister state"
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/components/admin/ProductsManagement.tsx",
-          "operation": "modify",
-          "description": "Ensure the ProductsManagement component uses useGetAllProducts to fetch and display all products in a table or grid. Implement add, edit, and delete product dialogs with forms that include name (text), description (textarea), price (number input in dollars, converted to cents as bigint), and image upload. Use ExternalBlob.fromBytes() with withUploadProgress() for image upload tracking via the blob-storage component. Verify the component's usage instructions before implementing. Wire the forms to useAddProduct, useUpdateProduct, and useDeleteProduct mutation hooks from useQueries. Display upload progress during image uploads. Show success/error toasts after mutations complete. Validate that price is a positive number before submission."
-        },
-        {
-          "path": "frontend/src/components/admin/OrdersManagement.tsx",
-          "operation": "modify",
-          "description": "Update the OrdersManagement component to fetch and display all store orders using the useGetAllStoreOrders query hook. Display orders in a sortable table showing order ID, customer name, email, phone, product name, product price, order status, and timestamp. Add a status dropdown or button group for each order that allows the admin to update the order status (options: Pending, Processing, Shipped, Completed, Cancelled). Wire status updates to the useUpdateStoreOrderStatus mutation hook. Show the customer's payment proof image if available using ExternalBlob's getDirectURL(). Display order timestamp in a human-readable format. Include filtering and sorting capabilities by status and date. Show success/error toasts after status updates."
-        },
-        {
-          "path": "frontend/src/hooks/useQueries.ts",
-          "operation": "modify",
-          "description": "Add mutation hooks for admin product management: useAddProduct (calls actor.addProduct with id, name, description, price as bigint, image as ExternalBlob), useUpdateProduct (calls actor.updateProduct with same parameters), useDeleteProduct (calls actor.deleteProduct with id). Add useGetAllStoreOrders query hook (calls actor.getAllStoreOrders) and useUpdateStoreOrderStatus mutation hook (calls actor.updateStoreOrderStatus with id and status string). Ensure all mutations invalidate relevant query caches on success. All hooks should handle loading, error, and success states appropriately."
-        },
-        {
-          "path": "frontend/src/pages/AdminDashboard.tsx",
-          "operation": "modify",
-          "description": "Ensure the AdminDashboard page renders a tabbed interface with at minimum two tabs: 'Products' and 'Orders'. The Products tab should render the ProductsManagement component, and the Orders tab should render the OrdersManagement component. Include proper tab navigation with visual indication of the active tab. Maintain the existing admin status check and redirect logic. Use shadcn/ui Tabs component for the tab interface."
+          "description": "Add the Creative Prints logo (using the workspace file path frontend/public/assets/generated/creative-prints-logo-transparent.dim_200x200.png) to the sticky header, positioned to the left of the navigation links. Ensure the logo is properly sized (e.g., h-10 or h-12) and responsive across mobile and desktop viewports. The logo should link to the home page."
         }
       ]
     }

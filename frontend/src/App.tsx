@@ -1,17 +1,8 @@
-import React from 'react';
+import { RouterProvider, createRouter, createRoute, createRootRoute, Outlet, redirect } from '@tanstack/react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import {
-  createRouter,
-  createRoute,
-  createRootRoute,
-  RouterProvider,
-  Outlet,
-  redirect,
-} from '@tanstack/react-router';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/sonner';
 import Layout from './components/Layout';
-import ErrorBoundary from './components/ErrorBoundary';
 import HomePage from './pages/HomePage';
 import StorePage from './pages/StorePage';
 import GalleryPage from './pages/GalleryPage';
@@ -22,11 +13,13 @@ import AdminDashboard from './pages/AdminDashboard';
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { retry: 1, staleTime: 30_000 },
+    queries: {
+      retry: 2,
+      staleTime: 1000 * 60 * 5,
+    },
   },
 });
 
-// Root route with Layout
 const rootRoute = createRootRoute({
   component: () => (
     <Layout>
@@ -35,7 +28,7 @@ const rootRoute = createRootRoute({
   ),
 });
 
-const indexRoute = createRoute({
+const homeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
   component: HomePage,
@@ -68,12 +61,12 @@ const checkoutRoute = createRoute({
 const orderSuccessRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/order-success',
-  component: OrderSuccessPage,
   validateSearch: (search: Record<string, unknown>) => ({
-    name: (search.name as string) ?? '',
-    total: (search.total as string) ?? '0.00',
-    items: (search.items as string) ?? '1',
+    customerName: (search.customerName as string) || '',
+    itemCount: Number(search.itemCount) || 0,
+    total: Number(search.total) || 0,
   }),
+  component: OrderSuccessPage,
 });
 
 const adminRoute = createRoute({
@@ -83,7 +76,7 @@ const adminRoute = createRoute({
 });
 
 const routeTree = rootRoute.addChildren([
-  indexRoute,
+  homeRoute,
   storeRoute,
   galleryRoute,
   customOrderRoute,
@@ -102,13 +95,11 @@ declare module '@tanstack/react-router' {
 
 export default function App() {
   return (
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <RouterProvider router={router} />
-          <Toaster richColors position="top-right" />
-        </ThemeProvider>
-      </QueryClientProvider>
-    </ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <RouterProvider router={router} />
+        <Toaster richColors position="top-right" />
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }

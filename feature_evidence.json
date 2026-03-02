@@ -2,9 +2,16 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-implement-a-customer-facing-store-page-that-displays-all-3d-printed-products-with-product-images-names-descriptions-and-prices-fetched-from-the-backend",
-      "featureTitle": "Implement a customer-facing store page that displays all 3D printed products with product images, names, descriptions, and prices fetched from the backend.",
+      "featureId": "feature-retain-all-existing-storefront-features-product-listings-on-the-store-page-shopping-cart-checkout-flow-with-payment-proof-upload-order-success-page-gallery-page-custom-order-form-and-home-landing-page-exactly-as-previously-implemented",
+      "featureTitle": "Retain all existing storefront features: product listings on the store page, shopping cart, checkout flow with payment proof upload, order success page, gallery page, custom order form, and home/landing page — exactly as previously implemented.",
       "files": [
+        "frontend/src/components/Layout.tsx",
+        "frontend/src/hooks/useCart.ts",
+        "frontend/src/pages/CheckoutPage.tsx",
+        "frontend/src/pages/CustomOrderPage.tsx",
+        "frontend/src/pages/GalleryPage.tsx",
+        "frontend/src/pages/HomePage.tsx",
+        "frontend/src/pages/OrderSuccessPage.tsx",
         "frontend/src/pages/StorePage.tsx"
       ],
       "components": [
@@ -24,15 +31,15 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-allow-customers-to-place-orders-through-the-site-by-adding-products-to-a-cart-and-completing-a-checkout-flow-that-captures-customer-details-and-submits-a-store-order-to-the-backend",
-      "featureTitle": "Allow customers to place orders through the site by adding products to a cart and completing a checkout flow that captures customer details and submits a store order to the backend.",
+      "featureId": "feature-grant-admin-access-exclusively-to-the-internet-identity-account-associated-with-lanepeevy-gmail-com-this-account-must-be-able-to-access-the-admin-dashboard-to-add-edit-delete-products-view-and-update-orders-manage-gallery-items-and-review-payment-confirmations",
+      "featureTitle": "Grant admin access exclusively to the Internet Identity account associated with lanepeevy@gmail.com. This account must be able to access the admin dashboard to add/edit/delete products, view and update orders, manage gallery items, and review payment confirmations.",
       "files": [
-        "frontend/src/App.tsx",
         "frontend/src/components/Layout.tsx",
-        "frontend/src/hooks/useCart.ts",
-        "frontend/src/pages/CheckoutPage.tsx",
-        "frontend/src/pages/OrderSuccessPage.tsx",
-        "frontend/src/pages/StorePage.tsx"
+        "frontend/src/components/admin/GalleryManagement.tsx",
+        "frontend/src/components/admin/OrdersManagement.tsx",
+        "frontend/src/components/admin/ProductsManagement.tsx",
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/pages/AdminDashboard.tsx"
       ],
       "components": [
         "blob-storage@4.0.0",
@@ -51,12 +58,10 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-restrict-admin-panel-access-exclusively-to-the-internet-identity-principal-associated-with-lanepeevy-gmail-com-the-backend-must-verify-admin-identity-on-all-admin-operations-and-the-frontend-must-only-render-the-admin-panel-when-the-authenticated-user-is-recognized-as-admin",
-      "featureTitle": "Restrict admin panel access exclusively to the Internet Identity principal associated with lanepeevy@gmail.com. The backend must verify admin identity on all admin operations and the frontend must only render the admin panel when the authenticated user is recognized as admin.",
+      "featureId": "feature-display-the-creative-prints-logo-in-the-site-header-consistently-across-all-pages",
+      "featureTitle": "Display the Creative Prints logo in the site header consistently across all pages.",
       "files": [
-        "frontend/src/components/Layout.tsx",
-        "frontend/src/hooks/useQueries.ts",
-        "frontend/src/pages/AdminDashboard.tsx"
+        "frontend/src/components/Layout.tsx"
       ],
       "components": [
         "blob-storage@4.0.0",
@@ -71,31 +76,6 @@
       ],
       "testIds": [
         "REQ-3"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-build-an-admin-dashboard-with-tabs-for-products-management-and-orders-management-the-products-tab-must-allow-the-admin-to-add-edit-and-delete-3d-printed-products-with-image-upload-name-description-price-the-orders-tab-must-display-all-customer-orders-with-status-customer-details-and-the-ability-to-update-order-status",
-      "featureTitle": "Build an admin dashboard with tabs for Products management and Orders management. The Products tab must allow the admin to add, edit, and delete 3D printed products (with image upload, name, description, price). The Orders tab must display all customer orders with status, customer details, and the ability to update order status.",
-      "files": [
-        "frontend/src/components/admin/OrdersManagement.tsx",
-        "frontend/src/components/admin/ProductsManagement.tsx",
-        "frontend/src/hooks/useQueries.ts",
-        "frontend/src/pages/AdminDashboard.tsx"
-      ],
-      "components": [
-        "blob-storage@4.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "qr-code@1.0.0",
-        "camera@1.0.0",
-        "authorization@4.0.0",
-        "github-export-icp-cli@1.0.0"
-      ],
-      "testIds": [
-        "REQ-4"
       ],
       "confidence": "high"
     }

@@ -1,76 +1,86 @@
 import { useGetAllGalleryItems } from '../hooks/useQueries';
-import { Loader2, Image as ImageIcon } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Images } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
+import { Button } from '@/components/ui/button';
 
 export default function GalleryPage() {
-  const { data: galleryItems, isLoading, error } = useGetAllGalleryItems();
-
-  if (isLoading) {
-    return (
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-20 flex justify-center items-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="text-center text-destructive">
-          <p>Error loading gallery. Please try again later.</p>
-        </div>
-      </div>
-    );
-  }
+  const { data: items, isLoading, error } = useGetAllGalleryItems();
 
   return (
-    <div className="w-full">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       {/* Header */}
-      <section className="bg-gradient-to-br from-background via-accent/10 to-background py-16">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">Project Gallery</h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Explore our portfolio of completed 3D printing projects
-            </p>
-          </div>
+      <div className="mb-8 text-center">
+        <h1 className="text-3xl font-bold text-foreground">Our Gallery</h1>
+        <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
+          Explore our portfolio of completed 3D printing projects — from intricate figurines to functional prototypes.
+        </p>
+      </div>
+
+      {/* Loading */}
+      {isLoading && (
+        <div className="columns-1 sm:columns-2 lg:columns-3 gap-4 space-y-4">
+          {Array.from({ length: 9 }).map((_, i) => (
+            <div key={i} className="break-inside-avoid mb-4">
+              <Skeleton className="w-full rounded-xl" style={{ height: `${200 + (i % 3) * 80}px` }} />
+            </div>
+          ))}
         </div>
-      </section>
+      )}
+
+      {/* Error */}
+      {error && (
+        <div className="text-center py-16">
+          <p className="text-destructive">Failed to load gallery. Please try again.</p>
+        </div>
+      )}
+
+      {/* Empty */}
+      {!isLoading && !error && (!items || items.length === 0) && (
+        <div className="text-center py-20 space-y-4">
+          <div className="flex justify-center">
+            <div className="p-4 rounded-full bg-muted">
+              <Images className="h-12 w-12 text-muted-foreground" />
+            </div>
+          </div>
+          <h2 className="text-xl font-semibold text-foreground">No Gallery Items Yet</h2>
+          <p className="text-muted-foreground max-w-md mx-auto">
+            Gallery items will appear here once they've been added by the admin.
+          </p>
+          <Button asChild variant="outline">
+            <Link to="/store">Browse Our Store</Link>
+          </Button>
+        </div>
+      )}
 
       {/* Gallery Grid */}
-      <section className="py-16">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          {galleryItems && galleryItems.length > 0 ? (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
-              {galleryItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="bg-card rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 border border-border/50 group"
-                >
-                  <div className="aspect-[4/3] overflow-hidden bg-muted/30">
-                    <img
-                      src={item.image.getDirectURL()}
-                      alt={item.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
-                  <div className="p-6">
-                    <h3 className="text-xl font-semibold mb-2">{item.title}</h3>
-                    <p className="text-muted-foreground text-sm">
-                      {item.description}
-                    </p>
-                  </div>
+      {!isLoading && items && items.length > 0 && (
+        <div className="columns-1 sm:columns-2 lg:columns-3 gap-4">
+          {items.map((item) => (
+            <div key={item.id} className="break-inside-avoid mb-4">
+              <Card className="overflow-hidden border border-border hover:border-primary/40 transition-colors group">
+                <div className="overflow-hidden">
+                  <img
+                    src={item.image.getDirectURL()}
+                    alt={item.title}
+                    className="w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/assets/generated/sample-prototype.dim_400x400.jpg';
+                    }}
+                  />
                 </div>
-              ))}
+                <CardContent className="p-4 space-y-1">
+                  <h3 className="font-semibold text-foreground">{item.title}</h3>
+                  {item.description && (
+                    <p className="text-sm text-muted-foreground">{item.description}</p>
+                  )}
+                </CardContent>
+              </Card>
             </div>
-          ) : (
-            <div className="text-center py-20">
-              <ImageIcon className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">No gallery items yet</h3>
-              <p className="text-muted-foreground">Check back soon to see our latest projects!</p>
-            </div>
-          )}
+          ))}
         </div>
-      </section>
+      )}
     </div>
   );
 }

@@ -1,68 +1,42 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "E-commerce app for 3D printed products (Creative Prints and Design) with a customer-facing storefront and a secure admin panel. Customers can browse products and place orders. Admin access is restricted to lanepeevy@gmail.com via Internet Identity login.",
+  "summary": "Creative Prints 3D printing storefront with product listings, shopping cart, order management, and an admin panel. Admin access is tied to Internet Identity linked to lanepeevy@gmail.com, allowing product management and order handling. The Creative Prints logo is displayed in the header.",
   "architectural_notes": [
-    "Admin access is email-based, restricted to lanepeevy@gmail.com, authenticated via Internet Identity login"
+    "Authentication uses Internet Identity (no traditional email/password login); admin access is granted to the account linked to lanepeevy@gmail.com",
+    "Admin panel allows adding/managing products and handling orders"
   ],
   "known_issues": [],
   "isFixRequest": false,
   "existing_features": [
     {
-      "id": "feature-implement-a-customer-facing-store-page-that-displays-all-3d-printed-products-with-product-images-names-descriptions-and-prices-fetched-from-the-backend",
-      "title": "Implement a customer-facing store page that displays all 3D printed products with product images, names, descriptions, and prices fetched from the backend.",
+      "id": "feature-retain-all-existing-storefront-features-product-listings-on-the-store-page-shopping-cart-checkout-flow-with-payment-proof-upload-order-success-page-gallery-page-custom-order-form-and-home-landing-page-exactly-as-previously-implemented",
+      "title": "Retain all existing storefront features: product listings on the store page, shopping cart, checkout flow with payment proof upload, order success page, gallery page, custom order form, and home/landing page — exactly as previously implemented.",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
     },
     {
-      "id": "feature-allow-customers-to-place-orders-through-the-site-by-adding-products-to-a-cart-and-completing-a-checkout-flow-that-captures-customer-details-and-submits-a-store-order-to-the-backend",
-      "title": "Allow customers to place orders through the site by adding products to a cart and completing a checkout flow that captures customer details and submits a store order to the backend.",
+      "id": "feature-grant-admin-access-exclusively-to-the-internet-identity-account-associated-with-lanepeevy-gmail-com-this-account-must-be-able-to-access-the-admin-dashboard-to-add-edit-delete-products-view-and-update-orders-manage-gallery-items-and-review-payment-confirmations",
+      "title": "Grant admin access exclusively to the Internet Identity account associated with lanepeevy@gmail.com. This account must be able to access the admin dashboard to add/edit/delete products, view and update orders, manage gallery items, and review payment confirmations.",
       "reqIds": [
         "REQ-2"
       ],
       "version": 1
     },
     {
-      "id": "feature-restrict-admin-panel-access-exclusively-to-the-internet-identity-principal-associated-with-lanepeevy-gmail-com-the-backend-must-verify-admin-identity-on-all-admin-operations-and-the-frontend-must-only-render-the-admin-panel-when-the-authenticated-user-is-recognized-as-admin",
-      "title": "Restrict admin panel access exclusively to the Internet Identity principal associated with lanepeevy@gmail.com. The backend must verify admin identity on all admin operations and the frontend must only render the admin panel when the authenticated user is recognized as admin.",
+      "id": "feature-display-the-creative-prints-logo-in-the-site-header-consistently-across-all-pages",
+      "title": "Display the Creative Prints logo in the site header consistently across all pages.",
       "reqIds": [
         "REQ-3"
       ],
       "version": 1
-    },
-    {
-      "id": "feature-build-an-admin-dashboard-with-tabs-for-products-management-and-orders-management-the-products-tab-must-allow-the-admin-to-add-edit-and-delete-3d-printed-products-with-image-upload-name-description-price-the-orders-tab-must-display-all-customer-orders-with-status-customer-details-and-the-ability-to-update-order-status",
-      "title": "Build an admin dashboard with tabs for Products management and Orders management. The Products tab must allow the admin to add, edit, and delete 3D printed products (with image upload, name, description, price). The Orders tab must display all customer orders with status, customer details, and the ability to update order status.",
-      "reqIds": [
-        "REQ-4"
-      ],
-      "version": 1
     }
   ],
-  "new_feature_requests": [
-    {
-      "id": "AR-1",
-      "summary": "Admin panel for managing 3D printed products and viewing/managing orders, accessible only to lanepeevy@gmail.com via Internet Identity",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-2",
-      "summary": "Customer-facing storefront showing product images, prices, and descriptions for 3D printed products",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-3",
-      "summary": "Order placement functionality allowing customers to place orders through the site",
-      "reqIds": [],
-      "status": "pending"
-    }
-  ],
+  "new_feature_requests": [],
   "gameProjectType": "none",
-  "projectName": "Creative Prints and Design",
+  "projectName": "Creative Prints",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

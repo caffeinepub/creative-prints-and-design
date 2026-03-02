@@ -1,90 +1,108 @@
-import React from 'react';
-import { Link, useSearch } from '@tanstack/react-router';
-import { CheckCircle, ShoppingBag, Home, Package } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
+import { useSearch } from '@tanstack/react-router';
+import { CheckCircle, Package, Mail, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 
 export default function OrderSuccessPage() {
-  const search = useSearch({ from: '/order-success' }) as { name?: string; total?: string; items?: string };
+  const search = useSearch({ from: '/order-success' });
+  const { customerName, itemCount, total } = search as {
+    customerName: string;
+    itemCount: number;
+    total: number;
+  };
 
-  const customerName = search.name ?? 'Customer';
-  const total = search.total ?? '0.00';
-  const itemCount = parseInt(search.items ?? '1', 10);
+  const steps = [
+    {
+      icon: Mail,
+      title: 'Order Received',
+      description: 'We\'ve received your order and will review it shortly.',
+    },
+    {
+      icon: Package,
+      title: 'Production',
+      description: 'Your items will be printed and quality-checked.',
+    },
+    {
+      icon: CheckCircle,
+      title: 'Delivery',
+      description: 'Your order will be shipped or ready for pickup.',
+    },
+  ];
 
   return (
-    <main className="min-h-screen bg-background flex items-center justify-center px-4 py-16">
-      <div className="max-w-lg w-full text-center">
-        {/* Success Icon */}
-        <div className="flex justify-center mb-6">
-          <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center">
-            <CheckCircle className="w-14 h-14 text-primary" />
-          </div>
-        </div>
-
-        {/* Heading */}
-        <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-3">
-          Order Placed! 🎉
-        </h1>
-        <p className="text-muted-foreground text-lg mb-8">
-          Thank you, <span className="font-semibold text-foreground">{customerName}</span>! Your order has been received and is being processed.
-        </p>
-
-        {/* Order Details Card */}
-        <div className="bg-card border border-border rounded-2xl p-6 mb-8 text-left space-y-4">
-          <h2 className="font-semibold text-foreground text-lg flex items-center gap-2">
-            <Package className="w-5 h-5 text-primary" />
-            Order Details
-          </h2>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Items ordered</span>
-              <span className="font-medium text-foreground">{itemCount} item{itemCount !== 1 ? 's' : ''}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Total paid</span>
-              <span className="font-bold text-primary text-base">${total}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Payment method</span>
-              <span className="font-medium text-foreground">Venmo</span>
-            </div>
-          </div>
-        </div>
-
-        {/* What's Next */}
-        <div className="bg-muted/50 border border-border rounded-2xl p-5 mb-8 text-left">
-          <h3 className="font-semibold text-foreground mb-3">What happens next?</h3>
-          <ol className="space-y-2 text-sm text-muted-foreground list-none">
-            <li className="flex gap-3">
-              <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">1</span>
-              We'll verify your Venmo payment
-            </li>
-            <li className="flex gap-3">
-              <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">2</span>
-              Your 3D printed items will be prepared
-            </li>
-            <li className="flex gap-3">
-              <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">3</span>
-              We'll contact you with shipping details
-            </li>
-          </ol>
-        </div>
-
-        {/* Actions */}
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Link to="/store">
-            <Button variant="outline" className="rounded-full px-6 gap-2 w-full sm:w-auto">
-              <ShoppingBag className="w-4 h-4" />
-              Continue Shopping
-            </Button>
-          </Link>
-          <Link to="/">
-            <Button className="rounded-full px-6 gap-2 w-full sm:w-auto">
-              <Home className="w-4 h-4" />
-              Back to Home
-            </Button>
-          </Link>
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-16 text-center space-y-8">
+      {/* Success Icon */}
+      <div className="flex justify-center">
+        <div className="p-5 rounded-full bg-green-500/10">
+          <CheckCircle className="h-16 w-16 text-green-500" />
         </div>
       </div>
-    </main>
+
+      {/* Heading */}
+      <div className="space-y-2">
+        <h1 className="text-3xl font-bold text-foreground">
+          Order Placed Successfully!
+        </h1>
+        {customerName && (
+          <p className="text-lg text-muted-foreground">
+            Thank you, <span className="font-semibold text-foreground">{customerName}</span>!
+          </p>
+        )}
+      </div>
+
+      {/* Order Details */}
+      <Card className="text-left">
+        <CardContent className="p-6 space-y-3">
+          <h2 className="font-semibold text-foreground">Order Summary</h2>
+          {itemCount > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Items ordered</span>
+              <span className="font-medium">{itemCount}</span>
+            </div>
+          )}
+          {total > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Total amount</span>
+              <span className="font-medium text-primary">${(total / 100).toFixed(2)}</span>
+            </div>
+          )}
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Payment method</span>
+            <span className="font-medium">Venmo</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* What Happens Next */}
+      <div className="space-y-4 text-left">
+        <h2 className="text-lg font-semibold text-foreground text-center">What Happens Next?</h2>
+        <div className="space-y-3">
+          {steps.map((step, index) => (
+            <div key={index} className="flex items-start gap-4 p-4 rounded-lg bg-card border border-border">
+              <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+                <step.icon className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="font-medium text-foreground">{step.title}</p>
+                <p className="text-sm text-muted-foreground">{step.description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+        <Button asChild size="lg">
+          <Link to="/store">
+            Continue Shopping <ArrowRight className="h-4 w-4 ml-2" />
+          </Link>
+        </Button>
+        <Button asChild variant="outline" size="lg">
+          <Link to="/">Back to Home</Link>
+        </Button>
+      </div>
+    </div>
   );
 }

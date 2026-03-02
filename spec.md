@@ -1,13 +1,11 @@
 # Specification
 
 ## Summary
-**Goal:** Build a full e-commerce storefront with customer-facing product browsing and order placement, plus a secured admin panel for managing products and orders for Creative Prints and Design.
+**Goal:** Preserve the full Creative Prints storefront and link admin dashboard access exclusively to the Internet Identity account associated with lanepeevy@gmail.com.
 
 **Planned changes:**
-- Add a customer-facing store page displaying all 3D printed products in a responsive grid with images, names, descriptions, and prices fetched from the backend
-- Add a shopping cart and checkout flow that collects customer name, email, shipping address, and submits a store order to the backend, showing a success confirmation on completion
-- Add backend data models and endpoints for products (CRUD) and store orders (create, list, update status)
-- Restrict admin panel access to the Internet Identity principal associated with lanepeevy@gmail.com; backend must verify admin identity on all admin operations and frontend must hide admin UI from non-admins
-- Build an admin dashboard with a Products tab (add/edit/delete products with image upload, name, description, price) and an Orders tab (view all orders with customer details and status, update order status through Pending → Processing → Shipped → Completed)
+- Retain all existing storefront pages and features: home/landing page, store page with product listings, shopping cart, checkout flow with payment proof upload, order success page, gallery page, and custom order form
+- Restrict admin dashboard access so only the Internet Identity account linked to lanepeevy@gmail.com can log in; unauthenticated or non-admin users are redirected away
+- Ensure the Creative Prints logo appears in the sticky header consistently across all pages
 
-**User-visible outcome:** Customers can browse 3D printed products, add them to a cart, and place orders through a checkout form. The admin (lanepeevy@gmail.com) can log in with Internet Identity to access a protected dashboard where they can manage products and review or update the status of customer orders.
+**User-visible outcome:** The full storefront remains intact for all visitors, and the admin at lanepeevy@gmail.com can sign in via Internet Identity to manage products, orders, gallery items, and payment confirmations from the admin dashboard.

@@ -1,312 +1,309 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from '@tanstack/react-router';
-import { ShoppingCart, Trash2, Plus, Minus, ArrowLeft, CheckCircle, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { useState } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import { useCart } from '../hooks/useCart';
 import { useSubmitStoreOrder } from '../hooks/useQueries';
+import { ExternalBlob } from '../backend';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { ExternalBlob } from '../backend';
-
-interface CustomerForm {
-  name: string;
-  email: string;
-  phone: string;
-  address: string;
-}
+import { Progress } from '@/components/ui/progress';
+import { Loader2, Minus, Plus, Trash2, Upload, FileCheck, ShoppingBag } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
+import { toast } from 'sonner';
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
-  const { items, removeFromCart, updateQuantity, clearCart, totalPrice } = useCart();
+  const { items, totalPrice, totalItems, updateQuantity, removeFromCart, clearCart } = useCart();
   const submitOrder = useSubmitStoreOrder();
 
-  const [form, setForm] = useState<CustomerForm>({ name: '', email: '', phone: '', address: '' });
-  const [errors, setErrors] = useState<Partial<CustomerForm>>({});
+  const [customerName, setCustomerName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const totalCents = totalPrice();
-  const totalDollars = totalCents / 100;
-
-  const validate = (): boolean => {
-    const newErrors: Partial<CustomerForm> = {};
-    if (!form.name.trim()) newErrors.name = 'Name is required';
-    if (!form.email.trim()) newErrors.email = 'Email is required';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) newErrors.email = 'Invalid email address';
-    if (!form.phone.trim()) newErrors.phone = 'Phone number is required';
-    if (!form.address.trim()) newErrors.address = 'Shipping address is required';
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) setPaymentProofFile(file);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
+
+    if (!customerName.trim() || !email.trim() || !phone.trim()) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
     if (items.length === 0) {
       toast.error('Your cart is empty');
       return;
     }
 
-    setIsSubmitting(true);
     try {
+      setIsSubmitting(true);
+
       let paymentProofBlob: ExternalBlob | null = null;
       if (paymentProofFile) {
         const bytes = new Uint8Array(await paymentProofFile.arrayBuffer());
-        paymentProofBlob = ExternalBlob.fromBytes(bytes).withUploadProgress((pct) => setUploadProgress(pct));
+        paymentProofBlob = ExternalBlob.fromBytes(bytes).withUploadProgress((pct) => {
+          setUploadProgress(pct);
+        });
       }
 
       // Submit one order per cart item
-      const orderIds: string[] = [];
       for (const item of items) {
-        const orderId = `order-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-        orderIds.push(orderId);
+        const orderId = `order-${Date.now()}-${Math.random().toString(36).slice(2)}`;
         await submitOrder.mutateAsync({
           id: orderId,
-          customerName: form.name,
-          email: form.email,
-          phone: form.phone,
+          customerName: customerName.trim(),
+          email: email.trim(),
+          phone: phone.trim(),
           productId: item.productId,
           productName: item.productName,
           productDescription: item.productDescription,
-          productPrice: BigInt(item.productPrice * item.quantity),
+          productPrice: item.productPrice,
           paymentProof: paymentProofBlob,
         });
       }
 
       clearCart();
-      toast.success('Order placed successfully!');
       navigate({
         to: '/order-success',
         search: {
-          name: form.name,
-          total: totalDollars.toFixed(2),
-          items: items.length.toString(),
+          customerName: customerName.trim(),
+          itemCount: totalItems,
+          total: totalPrice,
         },
       });
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to place order';
-      toast.error(message);
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to submit order. Please try again.');
     } finally {
       setIsSubmitting(false);
-      setUploadProgress(0);
     }
   };
 
-  if (items.length === 0 && !isSubmitting) {
+  if (items.length === 0) {
     return (
-      <main className="min-h-screen bg-background flex items-center justify-center px-4">
-        <div className="text-center max-w-md">
-          <ShoppingCart className="w-20 h-20 text-muted-foreground mx-auto mb-6 opacity-30" />
-          <h1 className="text-2xl font-bold text-foreground mb-3">Your cart is empty</h1>
-          <p className="text-muted-foreground mb-6">Add some products to your cart before checking out.</p>
-          <Link to="/store">
-            <Button className="rounded-full px-8">Browse Products</Button>
-          </Link>
+      <div className="max-w-lg mx-auto px-4 py-20 text-center space-y-6">
+        <div className="flex justify-center">
+          <div className="p-4 rounded-full bg-muted">
+            <ShoppingBag className="h-12 w-12 text-muted-foreground" />
+          </div>
         </div>
-      </main>
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Your Cart is Empty</h1>
+          <p className="text-muted-foreground mt-2">Add some products to get started.</p>
+        </div>
+        <Button asChild>
+          <Link to="/store">Browse Products</Link>
+        </Button>
+      </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-background py-10 px-4">
-      <div className="max-w-5xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <Link to="/store">
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Checkout</h1>
-            <p className="text-muted-foreground text-sm">Review your order and enter your details</p>
-          </div>
-        </div>
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <h1 className="text-3xl font-bold text-foreground mb-8">Checkout</h1>
 
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-          {/* Cart Items */}
-          <div className="lg:col-span-3 space-y-4">
-            <h2 className="text-lg font-semibold text-foreground">Order Summary</h2>
-            <div className="space-y-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Cart Items */}
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Order Summary</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               {items.map((item) => (
-                <div key={item.productId} className="bg-card border border-border rounded-xl p-4 flex gap-4">
+                <div key={item.productId} className="flex items-center gap-3">
                   {item.imageUrl && (
                     <img
                       src={item.imageUrl}
                       alt={item.productName}
-                      className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
+                      className="h-16 w-16 rounded-lg object-cover shrink-0"
                     />
                   )}
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-foreground truncate">{item.productName}</h3>
-                    <p className="text-muted-foreground text-xs line-clamp-2 mt-0.5">{item.productDescription}</p>
-                    <p className="text-primary font-semibold mt-1">
-                      ${(item.productPrice / 100).toFixed(2)} each
+                    <p className="font-medium text-foreground truncate">{item.productName}</p>
+                    <p className="text-sm text-muted-foreground">
+                      ${(Number(item.productPrice) / 100).toFixed(2)} each
                     </p>
                   </div>
-                  <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                    <button
-                      onClick={() => removeFromCart(item.productId)}
-                      className="text-muted-foreground hover:text-destructive transition-colors"
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => {
+                        if (item.quantity <= 1) removeFromCart(item.productId);
+                        else updateQuantity(item.productId, item.quantity - 1);
+                      }}
                     >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-                        className="w-6 h-6 rounded-full border border-border flex items-center justify-center hover:bg-muted transition-colors"
-                      >
-                        <Minus className="w-3 h-3" />
-                      </button>
-                      <span className="text-sm font-medium w-6 text-center">{item.quantity}</span>
-                      <button
-                        onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                        className="w-6 h-6 rounded-full border border-border flex items-center justify-center hover:bg-muted transition-colors"
-                      >
-                        <Plus className="w-3 h-3" />
-                      </button>
-                    </div>
-                    <p className="text-sm font-bold text-foreground">
-                      ${((item.productPrice * item.quantity) / 100).toFixed(2)}
-                    </p>
+                      <Minus className="h-3 w-3" />
+                    </Button>
+                    <span className="w-6 text-center text-sm">{item.quantity}</span>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-destructive hover:text-destructive"
+                      onClick={() => removeFromCart(item.productId)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
                   </div>
                 </div>
               ))}
-            </div>
-
-            <Separator />
-
-            {/* Venmo Payment Info */}
-            <div className="bg-muted/50 border border-border rounded-xl p-5">
-              <h3 className="font-semibold text-foreground mb-2">Payment via Venmo</h3>
-              <p className="text-muted-foreground text-sm mb-3">
-                Please send your payment of <span className="font-bold text-foreground">${totalDollars.toFixed(2)}</span> to our Venmo account before submitting your order.
-              </p>
-              <div className="flex items-center gap-4">
-                <img src="/assets/generated/venmo-qr-code.dim_300x300.png" alt="Venmo QR Code" className="w-24 h-24 rounded-lg border border-border" />
-                <div>
-                  <p className="text-sm font-medium text-foreground">Scan QR code or search:</p>
-                  <p className="text-primary font-bold text-lg">@CreativePrints</p>
-                  <p className="text-xs text-muted-foreground mt-1">Include your name in the payment note</p>
-                </div>
-              </div>
-              <div className="mt-4">
-                <Label htmlFor="paymentProof" className="text-sm font-medium">
-                  Upload Payment Screenshot (optional)
-                </Label>
-                <Input
-                  id="paymentProof"
-                  type="file"
-                  accept="image/*"
-                  className="mt-1"
-                  onChange={(e) => setPaymentProofFile(e.target.files?.[0] ?? null)}
-                />
-                {uploadProgress > 0 && uploadProgress < 100 && (
-                  <div className="mt-2">
-                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-primary transition-all duration-300"
-                        style={{ width: `${uploadProgress}%` }}
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">Uploading... {uploadProgress}%</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Customer Details Form */}
-          <div className="lg:col-span-2">
-            <form onSubmit={handleSubmit} className="bg-card border border-border rounded-xl p-6 space-y-5 sticky top-6">
-              <h2 className="text-lg font-semibold text-foreground">Your Details</h2>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="name">Full Name *</Label>
-                <Input
-                  id="name"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="Jane Smith"
-                  className={errors.name ? 'border-destructive' : ''}
-                />
-                {errors.name && <p className="text-destructive text-xs">{errors.name}</p>}
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="email">Email Address *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  placeholder="jane@example.com"
-                  className={errors.email ? 'border-destructive' : ''}
-                />
-                {errors.email && <p className="text-destructive text-xs">{errors.email}</p>}
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="phone">Phone Number *</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  placeholder="+1 (555) 000-0000"
-                  className={errors.phone ? 'border-destructive' : ''}
-                />
-                {errors.phone && <p className="text-destructive text-xs">{errors.phone}</p>}
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="address">Shipping Address *</Label>
-                <Input
-                  id="address"
-                  value={form.address}
-                  onChange={(e) => setForm({ ...form, address: e.target.value })}
-                  placeholder="123 Main St, City, State, ZIP"
-                  className={errors.address ? 'border-destructive' : ''}
-                />
-                {errors.address && <p className="text-destructive text-xs">{errors.address}</p>}
-              </div>
 
               <Separator />
 
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground text-sm">Total ({items.reduce((s, i) => s + i.quantity, 0)} items)</span>
-                <span className="text-xl font-bold text-primary">${totalDollars.toFixed(2)}</span>
+              <div className="flex justify-between font-semibold text-lg">
+                <span>Total</span>
+                <span className="text-primary">${(totalPrice / 100).toFixed(2)}</span>
               </div>
+            </CardContent>
+          </Card>
 
-              <Button
-                type="submit"
-                className="w-full rounded-full"
-                size="lg"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Placing Order...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Place Order
-                  </>
-                )}
-              </Button>
-
-              <p className="text-xs text-muted-foreground text-center">
-                By placing your order, you confirm that you have sent the Venmo payment.
+          {/* Payment Instructions */}
+          <Card className="border-primary/30 bg-primary/5">
+            <CardContent className="p-4 space-y-3">
+              <h3 className="font-semibold text-foreground">Payment via Venmo</h3>
+              <p className="text-sm text-muted-foreground">
+                Please send your payment to our Venmo account and upload a screenshot as proof of payment.
               </p>
-            </form>
-          </div>
+              <div className="flex justify-center">
+                <img
+                  src="/assets/generated/venmo-qr-code.dim_300x300.png"
+                  alt="Venmo QR Code"
+                  className="h-32 w-32 object-contain rounded-lg border border-border"
+                />
+              </div>
+              <p className="text-xs text-center text-muted-foreground">
+                Scan the QR code or search for our Venmo account
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Customer Details Form */}
+        <div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Your Details</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name *</Label>
+                  <Input
+                    id="name"
+                    placeholder="Your full name"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email Address *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="your@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone Number *</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="+1 (555) 000-0000"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="address">Shipping Address</Label>
+                  <Input
+                    id="address"
+                    placeholder="Your shipping address (optional)"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                  />
+                </div>
+
+                {/* Payment Proof Upload */}
+                <div className="space-y-2">
+                  <Label htmlFor="payment-proof">Payment Proof (Optional)</Label>
+                  <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary/50 transition-colors">
+                    <input
+                      id="payment-proof"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                    <label htmlFor="payment-proof" className="cursor-pointer">
+                      {paymentProofFile ? (
+                        <div className="flex items-center justify-center gap-2 text-primary">
+                          <FileCheck className="h-5 w-5" />
+                          <span className="text-sm font-medium">{paymentProofFile.name}</span>
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          <Upload className="h-6 w-6 text-muted-foreground mx-auto" />
+                          <p className="text-sm text-muted-foreground">
+                            Upload Venmo payment screenshot
+                          </p>
+                        </div>
+                      )}
+                    </label>
+                  </div>
+                  {isSubmitting && uploadProgress > 0 && (
+                    <div className="space-y-1">
+                      <Progress value={uploadProgress} className="h-2" />
+                      <p className="text-xs text-muted-foreground text-right">{uploadProgress}%</p>
+                    </div>
+                  )}
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={isSubmitting || submitOrder.isPending}
+                  size="lg"
+                >
+                  {isSubmitting || submitOrder.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Placing Order...
+                    </>
+                  ) : (
+                    `Place Order — $${(totalPrice / 100).toFixed(2)}`
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
