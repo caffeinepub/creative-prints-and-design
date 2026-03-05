@@ -58,9 +58,9 @@ export default function Layout({ children }: LayoutProps) {
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2 shrink-0">
               <img
-                src="/assets/generated/creative-prints-logo-transparent.dim_200x200.png"
+                src="/assets/uploads/969b5e15-d1e8-45ae-8c6d-2e4aab629acd-3-1.jpeg"
                 alt="Creative Prints and Design"
-                className="h-10 w-10 object-contain"
+                className="h-10 w-10 object-contain rounded-full"
               />
               <span className="font-bold text-lg text-primary hidden sm:block">
                 Creative Prints and Design
@@ -219,9 +219,9 @@ export default function Layout({ children }: LayoutProps) {
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-2">
                 <img
-                  src="/assets/generated/creative-prints-logo-transparent.dim_200x200.png"
+                  src="/assets/uploads/969b5e15-d1e8-45ae-8c6d-2e4aab629acd-3-1.jpeg"
                   alt="Creative Prints and Design"
-                  className="h-8 w-8 object-contain"
+                  className="h-8 w-8 object-contain rounded-full"
                 />
                 <span className="font-bold text-base text-primary">
                   Creative Prints and Design
