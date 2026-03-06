@@ -7,8 +7,27 @@ import type {
   StoreOrder,
   UserProfile,
 } from "../backend";
-import type { ExternalBlob } from "../backend";
+import type { ExternalBlob, backendInterface } from "../backend";
 import { useActor } from "./useActor";
+
+/**
+ * Polls until the actor is available or the timeout expires.
+ * This prevents "Actor not available" errors during the brief init window.
+ */
+async function waitForActor(
+  getActor: () => backendInterface | null,
+  maxWaitMs = 10000,
+): Promise<backendInterface> {
+  const start = Date.now();
+  while (Date.now() - start < maxWaitMs) {
+    const actor = getActor();
+    if (actor) return actor;
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+  throw new Error(
+    "Backend connection timed out. Please refresh the page and try again.",
+  );
+}
 
 // ===== Products =====
 
@@ -18,10 +37,10 @@ export function useGetAllProducts() {
   return useQuery<Product[]>({
     queryKey: ["products"],
     queryFn: async () => {
-      if (!actor) return [];
-      return actor.getAllProducts();
+      const resolvedActor = await waitForActor(() => actor);
+      return resolvedActor.getAllProducts();
     },
-    enabled: !!actor && !isFetching,
+    enabled: !isFetching,
   });
 }
 
@@ -43,8 +62,8 @@ export function useAddProduct() {
       price: bigint;
       image: ExternalBlob;
     }) => {
-      if (!actor) throw new Error("Actor not available");
-      return actor.addProduct(id, name, description, price, image);
+      const resolvedActor = await waitForActor(() => actor);
+      return resolvedActor.addProduct(id, name, description, price, image);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
@@ -70,8 +89,8 @@ export function useUpdateProduct() {
       price: bigint;
       image: ExternalBlob;
     }) => {
-      if (!actor) throw new Error("Actor not available");
-      return actor.updateProduct(id, name, description, price, image);
+      const resolvedActor = await waitForActor(() => actor);
+      return resolvedActor.updateProduct(id, name, description, price, image);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
@@ -85,8 +104,8 @@ export function useDeleteProduct() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      if (!actor) throw new Error("Actor not available");
-      return actor.deleteProduct(id);
+      const resolvedActor = await waitForActor(() => actor);
+      return resolvedActor.deleteProduct(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
@@ -102,10 +121,10 @@ export function useGetAllGalleryItems() {
   return useQuery<GalleryItem[]>({
     queryKey: ["galleryItems"],
     queryFn: async () => {
-      if (!actor) return [];
-      return actor.getAllGalleryItems();
+      const resolvedActor = await waitForActor(() => actor);
+      return resolvedActor.getAllGalleryItems();
     },
-    enabled: !!actor && !isFetching,
+    enabled: !isFetching,
   });
 }
 
@@ -125,8 +144,8 @@ export function useAddGalleryItem() {
       description: string;
       image: ExternalBlob;
     }) => {
-      if (!actor) throw new Error("Actor not available");
-      return actor.addGalleryItem(id, title, description, image);
+      const resolvedActor = await waitForActor(() => actor);
+      return resolvedActor.addGalleryItem(id, title, description, image);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["galleryItems"] });
@@ -150,8 +169,8 @@ export function useUpdateGalleryItem() {
       description: string;
       image: ExternalBlob;
     }) => {
-      if (!actor) throw new Error("Actor not available");
-      return actor.updateGalleryItem(id, title, description, image);
+      const resolvedActor = await waitForActor(() => actor);
+      return resolvedActor.updateGalleryItem(id, title, description, image);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["galleryItems"] });
@@ -165,8 +184,8 @@ export function useDeleteGalleryItem() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      if (!actor) throw new Error("Actor not available");
-      return actor.deleteGalleryItem(id);
+      const resolvedActor = await waitForActor(() => actor);
+      return resolvedActor.deleteGalleryItem(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["galleryItems"] });
@@ -196,8 +215,8 @@ export function useSubmitCustomOrder() {
       description: string;
       modelFile: ExternalBlob | null;
     }) => {
-      if (!actor) throw new Error("Actor not available");
-      return actor.submitCustomOrder(
+      const resolvedActor = await waitForActor(() => actor);
+      return resolvedActor.submitCustomOrder(
         id,
         name,
         email,
@@ -218,10 +237,10 @@ export function useGetAllCustomOrders() {
   return useQuery<CustomOrder[]>({
     queryKey: ["customOrders"],
     queryFn: async () => {
-      if (!actor) return [];
-      return actor.getAllCustomOrders();
+      const resolvedActor = await waitForActor(() => actor);
+      return resolvedActor.getAllCustomOrders();
     },
-    enabled: !!actor && !isFetching,
+    enabled: !isFetching,
   });
 }
 
@@ -253,8 +272,8 @@ export function useSubmitStoreOrder() {
       productPrice: bigint;
       paymentProof: ExternalBlob | null;
     }) => {
-      if (!actor) throw new Error("Actor not available");
-      return actor.submitStoreOrder(
+      const resolvedActor = await waitForActor(() => actor);
+      return resolvedActor.submitStoreOrder(
         id,
         customerName,
         email,
@@ -278,10 +297,10 @@ export function useGetAllStoreOrders() {
   return useQuery<StoreOrder[]>({
     queryKey: ["storeOrders"],
     queryFn: async () => {
-      if (!actor) return [];
-      return actor.getAllStoreOrders();
+      const resolvedActor = await waitForActor(() => actor);
+      return resolvedActor.getAllStoreOrders();
     },
-    enabled: !!actor && !isFetching,
+    enabled: !isFetching,
   });
 }
 
@@ -291,8 +310,8 @@ export function useUpdateStoreOrderStatus() {
 
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      if (!actor) throw new Error("Actor not available");
-      return actor.updateStoreOrderStatus(id, status);
+      const resolvedActor = await waitForActor(() => actor);
+      return resolvedActor.updateStoreOrderStatus(id, status);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["storeOrders"] });
@@ -318,8 +337,8 @@ export function useSubmitPaymentConfirmation() {
       orderId: string;
       proofFile: ExternalBlob;
     }) => {
-      if (!actor) throw new Error("Actor not available");
-      return actor.submitPaymentConfirmation(
+      const resolvedActor = await waitForActor(() => actor);
+      return resolvedActor.submitPaymentConfirmation(
         id,
         customerName,
         orderId,
@@ -338,10 +357,10 @@ export function useGetAllPaymentConfirmations() {
   return useQuery<PaymentConfirmation[]>({
     queryKey: ["paymentConfirmations"],
     queryFn: async () => {
-      if (!actor) return [];
-      return actor.getAllPaymentConfirmations();
+      const resolvedActor = await waitForActor(() => actor);
+      return resolvedActor.getAllPaymentConfirmations();
     },
-    enabled: !!actor && !isFetching,
+    enabled: !isFetching,
   });
 }
 
@@ -353,14 +372,14 @@ export function useIsCallerAdmin() {
   return useQuery<boolean>({
     queryKey: ["isCallerAdmin"],
     queryFn: async () => {
-      if (!actor) return false;
+      const resolvedActor = await waitForActor(() => actor);
       try {
-        return await actor.isCallerAdmin();
+        return await resolvedActor.isCallerAdmin();
       } catch {
         return false;
       }
     },
-    enabled: !!actor && !isFetching,
+    enabled: !isFetching,
     staleTime: 1000 * 60 * 5,
   });
 }
@@ -371,8 +390,8 @@ export function useVerifyAndEnsureAdminStatus() {
 
   return useMutation({
     mutationFn: async () => {
-      if (!actor) throw new Error("Actor not available");
-      return actor.verifyAndEnsureAdminStatus();
+      const resolvedActor = await waitForActor(() => actor);
+      return resolvedActor.verifyAndEnsureAdminStatus();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["isCallerAdmin"] });
@@ -388,10 +407,10 @@ export function useGetCallerUserProfile() {
   const query = useQuery<UserProfile | null>({
     queryKey: ["currentUserProfile"],
     queryFn: async () => {
-      if (!actor) throw new Error("Actor not available");
-      return actor.getCallerUserProfile();
+      const resolvedActor = await waitForActor(() => actor);
+      return resolvedActor.getCallerUserProfile();
     },
-    enabled: !!actor && !actorFetching,
+    enabled: !actorFetching,
     retry: false,
   });
 
@@ -408,8 +427,8 @@ export function useSaveCallerUserProfile() {
 
   return useMutation({
     mutationFn: async (profile: UserProfile) => {
-      if (!actor) throw new Error("Actor not available");
-      return actor.saveCallerUserProfile(profile);
+      const resolvedActor = await waitForActor(() => actor);
+      return resolvedActor.saveCallerUserProfile(profile);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["currentUserProfile"] });
@@ -424,8 +443,8 @@ export function useRegisterUserProfile() {
 
   return useMutation({
     mutationFn: async ({ email, name }: { email: string; name: string }) => {
-      if (!actor) throw new Error("Actor not available");
-      return actor.registerUserProfile(email, name);
+      const resolvedActor = await waitForActor(() => actor);
+      return resolvedActor.registerUserProfile(email, name);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["currentUserProfile"] });
