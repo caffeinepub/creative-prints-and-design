@@ -9,12 +9,14 @@ import GalleryManagement from "../components/admin/GalleryManagement";
 import OrdersManagement from "../components/admin/OrdersManagement";
 import PaymentsManagement from "../components/admin/PaymentsManagement";
 import ProductsManagement from "../components/admin/ProductsManagement";
+import { useActor } from "../hooks/useActor";
 import { useAuth } from "../hooks/useAuth";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const { user, isAuthenticated, isLoading, login, logout, isAdmin } =
     useAuth();
+  const { actor } = useActor();
 
   const [loginEmail, setLoginEmail] = useState("lanepeevy@gmail.com");
   const [loginPassword, setLoginPassword] = useState("");
@@ -26,6 +28,20 @@ export default function AdminDashboard() {
     const success = await login(loginEmail, loginPassword);
     if (!success) {
       setLoginError("Invalid email or password. Please try again.");
+      return;
+    }
+    // After successful login, register the admin email with the backend
+    // so this principal is recognized as admin for all subsequent calls
+    if (actor && loginEmail.toLowerCase() === "lanepeevy@gmail.com") {
+      try {
+        await actor.saveCallerUserProfile({
+          email: "lanepeevy@gmail.com",
+          name: "Lane Peevy",
+          isAdmin: true,
+        });
+      } catch (_err) {
+        // Non-fatal: backend will still recognize admin on the next call
+      }
     }
   };
 

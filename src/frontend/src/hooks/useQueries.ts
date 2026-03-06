@@ -9,7 +9,6 @@ import type {
 } from "../backend";
 import type { ExternalBlob } from "../backend";
 import { useActor } from "./useActor";
-import { useInternetIdentity } from "./useInternetIdentity";
 
 // ===== Products =====
 
@@ -215,7 +214,6 @@ export function useSubmitCustomOrder() {
 
 export function useGetAllCustomOrders() {
   const { actor, isFetching } = useActor();
-  const { identity } = useInternetIdentity();
 
   return useQuery<CustomOrder[]>({
     queryKey: ["customOrders"],
@@ -223,7 +221,7 @@ export function useGetAllCustomOrders() {
       if (!actor) return [];
       return actor.getAllCustomOrders();
     },
-    enabled: !!actor && !isFetching && !!identity,
+    enabled: !!actor && !isFetching,
   });
 }
 
@@ -276,7 +274,6 @@ export function useSubmitStoreOrder() {
 
 export function useGetAllStoreOrders() {
   const { actor, isFetching } = useActor();
-  const { identity } = useInternetIdentity();
 
   return useQuery<StoreOrder[]>({
     queryKey: ["storeOrders"],
@@ -284,7 +281,7 @@ export function useGetAllStoreOrders() {
       if (!actor) return [];
       return actor.getAllStoreOrders();
     },
-    enabled: !!actor && !isFetching && !!identity,
+    enabled: !!actor && !isFetching,
   });
 }
 
@@ -337,7 +334,6 @@ export function useSubmitPaymentConfirmation() {
 
 export function useGetAllPaymentConfirmations() {
   const { actor, isFetching } = useActor();
-  const { identity } = useInternetIdentity();
 
   return useQuery<PaymentConfirmation[]>({
     queryKey: ["paymentConfirmations"],
@@ -345,7 +341,7 @@ export function useGetAllPaymentConfirmations() {
       if (!actor) return [];
       return actor.getAllPaymentConfirmations();
     },
-    enabled: !!actor && !isFetching && !!identity,
+    enabled: !!actor && !isFetching,
   });
 }
 
@@ -353,10 +349,9 @@ export function useGetAllPaymentConfirmations() {
 
 export function useIsCallerAdmin() {
   const { actor, isFetching } = useActor();
-  const { identity } = useInternetIdentity();
 
   return useQuery<boolean>({
-    queryKey: ["isCallerAdmin", identity?.getPrincipal().toString()],
+    queryKey: ["isCallerAdmin"],
     queryFn: async () => {
       if (!actor) return false;
       try {
@@ -365,7 +360,7 @@ export function useIsCallerAdmin() {
         return false;
       }
     },
-    enabled: !!actor && !isFetching && !!identity,
+    enabled: !!actor && !isFetching,
     staleTime: 1000 * 60 * 5,
   });
 }
@@ -389,15 +384,14 @@ export function useVerifyAndEnsureAdminStatus() {
 
 export function useGetCallerUserProfile() {
   const { actor, isFetching: actorFetching } = useActor();
-  const { identity } = useInternetIdentity();
 
   const query = useQuery<UserProfile | null>({
-    queryKey: ["currentUserProfile", identity?.getPrincipal().toString()],
+    queryKey: ["currentUserProfile"],
     queryFn: async () => {
       if (!actor) throw new Error("Actor not available");
       return actor.getCallerUserProfile();
     },
-    enabled: !!actor && !actorFetching && !!identity,
+    enabled: !!actor && !actorFetching,
     retry: false,
   });
 
