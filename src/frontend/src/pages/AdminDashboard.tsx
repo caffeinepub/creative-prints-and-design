@@ -2,21 +2,35 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { AlertTriangle, Loader2, Shield } from "lucide-react";
 import { useState } from "react";
+import type { backendInterface } from "../backend";
 import GalleryManagement from "../components/admin/GalleryManagement";
 import OrdersManagement from "../components/admin/OrdersManagement";
 import PaymentsManagement from "../components/admin/PaymentsManagement";
 import ProductsManagement from "../components/admin/ProductsManagement";
-import { useActor } from "../hooks/useActor";
 import { useAuth } from "../hooks/useAuth";
+
+/** Get the latest actor from the query cache (avoids stale closure issues). */
+function getActorFromCache(
+  queryClient: ReturnType<typeof useQueryClient>,
+): backendInterface | null {
+  const queries = queryClient.getQueriesData<backendInterface>({
+    queryKey: ["actor"],
+  });
+  for (const [, data] of queries) {
+    if (data) return data;
+  }
+  return null;
+}
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user, isAuthenticated, isLoading, login, logout, isAdmin } =
     useAuth();
-  const { actor } = useActor();
 
   const [loginEmail, setLoginEmail] = useState("lanepeevy@gmail.com");
   const [loginPassword, setLoginPassword] = useState("");
@@ -31,17 +45,30 @@ export default function AdminDashboard() {
       return;
     }
     // After successful login, register the admin email with the backend
-    // so this principal is recognized as admin for all subsequent calls
-    if (actor && loginEmail.toLowerCase() === "lanepeevy@gmail.com") {
-      try {
-        await actor.saveCallerUserProfile({
-          email: "lanepeevy@gmail.com",
-          name: "Lane Peevy",
-          isAdmin: true,
-        });
-      } catch (_err) {
-        // Non-fatal: backend will still recognize admin on the next call
-      }
+    // using the freshest actor from the query cache to avoid stale closures
+    if (loginEmail.toLowerCase() === "lanepeevy@gmail.com") {
+      // Poll briefly for the actor to be available, then register
+      let attempts = 0;
+      const maxAttempts = 10;
+      const tryRegister = async (): Promise<void> => {
+        const freshActor = getActorFromCache(queryClient);
+        if (freshActor) {
+          try {
+            await freshActor.saveCallerUserProfile({
+              email: "lanepeevy@gmail.com",
+              name: "Lane Peevy",
+              isAdmin: true,
+            });
+          } catch (_err) {
+            // Registration will be retried on each admin action via ensureAdminRegistered
+          }
+        } else if (attempts < maxAttempts) {
+          attempts++;
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          await tryRegister();
+        }
+      };
+      tryRegister();
     }
   };
 
