@@ -182,6 +182,7 @@ export interface backendInterface {
     addGalleryItem(id: string, title: string, description: string, image: ExternalBlob): Promise<void>;
     addProduct(id: string, name: string, description: string, price: bigint, image: ExternalBlob): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    assignUserRole(user: Principal, role: UserRole): Promise<void>;
     deleteGalleryItem(id: string): Promise<void>;
     deleteProduct(id: string): Promise<void>;
     getAllCustomOrders(): Promise<Array<CustomOrder>>;
@@ -347,6 +348,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n9(this._uploadFile, this._downloadFile, arg1));
+            return result;
+        }
+    }
+    async assignUserRole(arg0: Principal, arg1: UserRole): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.assignUserRole(arg0, to_candid_UserRole_n9(this._uploadFile, this._downloadFile, arg1));
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.assignUserRole(arg0, to_candid_UserRole_n9(this._uploadFile, this._downloadFile, arg1));
             return result;
         }
     }

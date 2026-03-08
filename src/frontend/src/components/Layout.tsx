@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Link, useRouter } from "@tanstack/react-router";
 import { Menu, Shield, ShoppingCart, X } from "lucide-react";
 import { useState } from "react";
-import { useCart } from "../hooks/useCart";
+import { computeTotalItems, useCart } from "../hooks/useCart";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useIsCallerAdmin } from "../hooks/useQueries";
 
@@ -14,7 +14,8 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { totalItems } = useCart();
+  const { items } = useCart();
+  const totalItems = computeTotalItems(items);
   const { login, clear, loginStatus, identity, isInitializing } =
     useInternetIdentity();
   const queryClient = useQueryClient();

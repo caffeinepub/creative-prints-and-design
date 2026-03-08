@@ -10,22 +10,19 @@ import MixinStorage "blob-storage/Mixin";
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
 
-
-// Data migration through migration module
-
 actor {
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
 
   let GUARANTEED_ADMIN_EMAIL = "lanepeevy@gmail.com";
 
-  let emailToPrincipal = Map.empty<Text, Principal>();
-  let userProfiles = Map.empty<Principal, UserProfile>();
-  let products = Map.empty<Text, Product>();
-  let galleryItems = Map.empty<Text, GalleryItem>();
-  let customOrders = Map.empty<Text, CustomOrder>();
-  let storeOrders = Map.empty<Text, StoreOrder>();
-  let paymentConfirmations = Map.empty<Text, PaymentConfirmation>();
+  stable var emailToPrincipal = Map.empty<Text, Principal>();
+  stable var userProfiles = Map.empty<Principal, UserProfile>();
+  stable var products = Map.empty<Text, Product>();
+  stable var galleryItems = Map.empty<Text, GalleryItem>();
+  stable var customOrders = Map.empty<Text, CustomOrder>();
+  stable var storeOrders = Map.empty<Text, StoreOrder>();
+  stable var paymentConfirmations = Map.empty<Text, PaymentConfirmation>();
 
   include MixinStorage();
 
@@ -266,6 +263,12 @@ actor {
     emailToPrincipal.get(email.toLower());
   };
 
+  // Admin-only: assign a role to a user.
+  public shared ({ caller }) func assignUserRole(user : Principal, role : UserRole) : async () {
+    requireAdminUpdate(caller);
+    AccessControl.assignRole(accessControlState, caller, user, role);
+  };
+
   // === Product Management ===
 
   public shared ({ caller }) func addProduct(id : Text, name : Text, description : Text, price : Nat, image : Storage.ExternalBlob) : async () {
@@ -462,18 +465,18 @@ actor {
 
   // === Admin Order/Confirmation Queries ===
 
-  public query ({ caller }) func getAllCustomOrders() : async [CustomOrder] {
-    requireAdminQuery(caller);
+  public shared ({ caller }) func getAllCustomOrders() : async [CustomOrder] {
+    requireAdminUpdate(caller);
     customOrders.values().toArray().sort();
   };
 
-  public query ({ caller }) func getAllStoreOrders() : async [StoreOrder] {
-    requireAdminQuery(caller);
+  public shared ({ caller }) func getAllStoreOrders() : async [StoreOrder] {
+    requireAdminUpdate(caller);
     storeOrders.values().toArray().sort();
   };
 
-  public query ({ caller }) func getAllUnifiedOrders() : async [UnifiedOrder] {
-    requireAdminQuery(caller);
+  public shared ({ caller }) func getAllUnifiedOrders() : async [UnifiedOrder] {
+    requireAdminUpdate(caller);
 
     let customOrdersArray = customOrders.values().toArray();
     let storeOrdersArray = storeOrders.values().toArray();
@@ -523,8 +526,8 @@ actor {
     unifiedCustomOrders.concat(unifiedStoreOrders);
   };
 
-  public query ({ caller }) func getAllPaymentConfirmations() : async [PaymentConfirmation] {
-    requireAdminQuery(caller);
+  public shared ({ caller }) func getAllPaymentConfirmations() : async [PaymentConfirmation] {
+    requireAdminUpdate(caller);
     paymentConfirmations.values().toArray().sort();
   };
 };

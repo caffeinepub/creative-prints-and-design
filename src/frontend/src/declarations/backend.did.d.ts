@@ -115,6 +115,7 @@ export interface _SERVICE {
     undefined
   >,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'assignUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'deleteGalleryItem' : ActorMethod<[string], undefined>,
   'deleteProduct' : ActorMethod<[string], undefined>,
   'getAllCustomOrders' : ActorMethod<[], Array<CustomOrder>>,

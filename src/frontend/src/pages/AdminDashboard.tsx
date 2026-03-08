@@ -44,15 +44,24 @@ export default function AdminDashboard() {
       setLoginError("Invalid email or password. Please try again.");
       return;
     }
-    // After successful login, register the admin email with the backend
-    // using the freshest actor from the query cache to avoid stale closures
+    // After successful login, bootstrap the admin principal with the backend.
+    // Use verifyAndEnsureAdminStatus first (the backend's own bootstrapping
+    // method that recognises the hardcoded admin email without requiring the
+    // caller to already be admin). Fall back to saveCallerUserProfile.
     if (loginEmail.toLowerCase() === "lanepeevy@gmail.com") {
-      // Poll briefly for the actor to be available, then register
       let attempts = 0;
-      const maxAttempts = 10;
+      const maxAttempts = 15;
       const tryRegister = async (): Promise<void> => {
         const freshActor = getActorFromCache(queryClient);
         if (freshActor) {
+          // Try verifyAndEnsureAdminStatus first
+          try {
+            const verified = await freshActor.verifyAndEnsureAdminStatus();
+            if (verified) return;
+          } catch {
+            // fall through to saveCallerUserProfile
+          }
+          // Fallback: directly save admin profile
           try {
             await freshActor.saveCallerUserProfile({
               email: "lanepeevy@gmail.com",
@@ -60,11 +69,11 @@ export default function AdminDashboard() {
               isAdmin: true,
             });
           } catch (_err) {
-            // Registration will be retried on each admin action via ensureAdminRegistered
+            // Will be retried on each admin action
           }
         } else if (attempts < maxAttempts) {
           attempts++;
-          await new Promise((resolve) => setTimeout(resolve, 500));
+          await new Promise((resolve) => setTimeout(resolve, 400));
           await tryRegister();
         }
       };

@@ -7,7 +7,7 @@ import { Loader2, Minus, Package, Plus, ShoppingCart } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import type { Product } from "../backend";
-import { useCart } from "../hooks/useCart";
+import { computeTotalItems, useCart } from "../hooks/useCart";
 import { useGetAllProducts } from "../hooks/useQueries";
 
 function ProductCard({ product }: { product: Product }) {
@@ -82,7 +82,8 @@ function ProductCard({ product }: { product: Product }) {
 
 export default function StorePage() {
   const { data: products, isLoading, error } = useGetAllProducts();
-  const { totalItems } = useCart();
+  const { items } = useCart();
+  const totalItems = computeTotalItems(items);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">

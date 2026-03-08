@@ -18,19 +18,18 @@ import {
 import { useState } from "react";
 import { toast } from "sonner";
 import { ExternalBlob } from "../backend";
-import { useCart } from "../hooks/useCart";
+import {
+  computeTotalItems,
+  computeTotalPrice,
+  useCart,
+} from "../hooks/useCart";
 import { useSubmitStoreOrder } from "../hooks/useQueries";
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
-  const {
-    items,
-    totalPrice,
-    totalItems,
-    updateQuantity,
-    removeFromCart,
-    clearCart,
-  } = useCart();
+  const { items, updateQuantity, removeFromCart, clearCart } = useCart();
+  const totalItems = computeTotalItems(items);
+  const totalPrice = computeTotalPrice(items);
   const submitOrder = useSubmitStoreOrder();
 
   const [customerName, setCustomerName] = useState("");

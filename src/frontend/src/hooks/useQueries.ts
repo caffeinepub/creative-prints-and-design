@@ -51,19 +51,35 @@ const ADMIN_EMAIL = "lanepeevy@gmail.com";
 
 /**
  * Ensures the current caller is registered as the guaranteed admin before
- * performing any admin action. This is necessary because the app uses
- * email/password login (frontend-only) while the ICP backend authenticates
- * by principal — so we must always re-register the admin email binding.
+ * performing any admin action.
  *
- * Errors are NOT suppressed here so that callers can see if registration fails.
+ * Strategy:
+ * 1. Try `verifyAndEnsureAdminStatus()` — the backend's own bootstrapping method
+ *    that recognises the hardcoded admin email without requiring the caller to be
+ *    admin first.
+ * 2. If that fails or returns false, fall back to `saveCallerUserProfile` with
+ *    isAdmin:true (works when the backend already trusts the principal).
+ *
+ * Errors are swallowed here — the subsequent admin action itself will surface any
+ * authorisation failure with a clear message.
  */
 async function ensureAdminRegistered(actor: backendInterface): Promise<void> {
-  // Must re-register every time since anonymous principals reset between sessions
-  await actor.saveCallerUserProfile({
-    email: ADMIN_EMAIL,
-    name: "Lane Peevy",
-    isAdmin: true,
-  });
+  try {
+    const verified = await actor.verifyAndEnsureAdminStatus();
+    if (verified) return;
+  } catch {
+    // verifyAndEnsureAdminStatus not available or threw — try fallback
+  }
+
+  try {
+    await actor.saveCallerUserProfile({
+      email: ADMIN_EMAIL,
+      name: "Lane Peevy",
+      isAdmin: true,
+    });
+  } catch {
+    // Swallow — the action itself will fail with an explicit error if not authorised
+  }
 }
 
 /**
@@ -289,9 +305,7 @@ export function useGetAllCustomOrders() {
   return useQuery<CustomOrder[]>({
     queryKey: ["customOrders"],
     queryFn: async () => {
-      const resolvedActor = await waitForActor(() =>
-        getActorFromCache(queryClient),
-      );
+      const resolvedActor = await waitForAdminActor(queryClient);
       return resolvedActor.getAllCustomOrders();
     },
     enabled: !isFetching,
@@ -353,9 +367,7 @@ export function useGetAllStoreOrders() {
   return useQuery<StoreOrder[]>({
     queryKey: ["storeOrders"],
     queryFn: async () => {
-      const resolvedActor = await waitForActor(() =>
-        getActorFromCache(queryClient),
-      );
+      const resolvedActor = await waitForAdminActor(queryClient);
       return resolvedActor.getAllStoreOrders();
     },
     enabled: !isFetching,
@@ -416,9 +428,7 @@ export function useGetAllPaymentConfirmations() {
   return useQuery<PaymentConfirmation[]>({
     queryKey: ["paymentConfirmations"],
     queryFn: async () => {
-      const resolvedActor = await waitForActor(() =>
-        getActorFromCache(queryClient),
-      );
+      const resolvedActor = await waitForAdminActor(queryClient);
       return resolvedActor.getAllPaymentConfirmations();
     },
     enabled: !isFetching,

@@ -89,6 +89,7 @@ export interface backendInterface {
     addGalleryItem(id: string, title: string, description: string, image: ExternalBlob): Promise<void>;
     addProduct(id: string, name: string, description: string, price: bigint, image: ExternalBlob): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    assignUserRole(user: Principal, role: UserRole): Promise<void>;
     deleteGalleryItem(id: string): Promise<void>;
     deleteProduct(id: string): Promise<void>;
     getAllCustomOrders(): Promise<Array<CustomOrder>>;

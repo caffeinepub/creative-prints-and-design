@@ -16,8 +16,27 @@ interface CartState {
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
-  totalItems: number;
-  totalPrice: number;
+}
+
+/** Safely convert a BigInt/string/number price to a plain JS number. */
+function toNumber(price: unknown): number {
+  if (typeof price === "bigint") return Number(price);
+  if (typeof price === "number") return Number.isNaN(price) ? 0 : price;
+  const n = Number.parseInt(String(price), 10);
+  return Number.isNaN(n) ? 0 : n;
+}
+
+/** Compute total items from an items array. */
+export function computeTotalItems(items: CartItem[]): number {
+  return items.reduce((sum, item) => sum + item.quantity, 0);
+}
+
+/** Compute total price (in cents) from an items array. */
+export function computeTotalPrice(items: CartItem[]): number {
+  return items.reduce(
+    (sum, item) => sum + toNumber(item.productPrice) * item.quantity,
+    0,
+  );
 }
 
 export const useCart = create<CartState>()(
@@ -64,17 +83,6 @@ export const useCart = create<CartState>()(
       },
 
       clearCart: () => set({ items: [] }),
-
-      get totalItems() {
-        return get().items.reduce((sum, item) => sum + item.quantity, 0);
-      },
-
-      get totalPrice() {
-        return get().items.reduce(
-          (sum, item) => sum + Number(item.productPrice) * item.quantity,
-          0,
-        );
-      },
     }),
     {
       name: "creative-prints-cart",
@@ -87,9 +95,12 @@ export const useCart = create<CartState>()(
             const parsed = JSON.parse(str);
             // Convert price strings back to BigInt
             if (parsed?.state?.items) {
-              parsed.state.items = parsed.state.items.map((item: any) => ({
+              parsed.state.items = parsed.state.items.map((item: CartItem) => ({
                 ...item,
-                productPrice: BigInt(item.productPrice ?? 0),
+                productPrice: BigInt(
+                  (item as CartItem & { productPrice: unknown }).productPrice ??
+                    0,
+                ),
               }));
             }
             return parsed;
