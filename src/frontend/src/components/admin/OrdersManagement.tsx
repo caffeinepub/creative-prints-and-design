@@ -17,11 +17,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ExternalLink, Loader2, ShoppingBag } from "lucide-react";
+import {
+  ExternalLink,
+  Loader2,
+  MessageSquare,
+  ShoppingBag,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import type { StoreOrder } from "../../backend";
+import type { CustomOrder, StoreOrder } from "../../backend";
 import {
+  useGetAllCustomOrders,
   useGetAllStoreOrders,
   useUpdateStoreOrderStatus,
 } from "../../hooks/useQueries";
@@ -42,6 +48,7 @@ const STATUS_COLORS: Record<string, string> = {
   shipped: "bg-cyan-500/10 text-cyan-600 border-cyan-500/20",
   delivered: "bg-green-500/10 text-green-600 border-green-500/20",
   cancelled: "bg-red-500/10 text-red-600 border-red-500/20",
+  custom: "bg-orange-500/10 text-orange-600 border-orange-500/20",
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -55,7 +62,7 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function OrderRow({ order }: { order: StoreOrder }) {
+function StoreOrderRow({ order }: { order: StoreOrder }) {
   const updateStatus = useUpdateStoreOrderStatus();
   const [updating, setUpdating] = useState(false);
 
@@ -64,8 +71,10 @@ function OrderRow({ order }: { order: StoreOrder }) {
       setUpdating(true);
       await updateStatus.mutateAsync({ id: order.id, status: newStatus });
       toast.success(`Order status updated to ${newStatus}`);
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to update status");
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Failed to update status";
+      toast.error(message);
     } finally {
       setUpdating(false);
     }
@@ -75,6 +84,14 @@ function OrderRow({ order }: { order: StoreOrder }) {
 
   return (
     <TableRow>
+      <TableCell>
+        <Badge
+          variant="outline"
+          className="text-xs bg-blue-500/10 text-blue-600 border-blue-500/20"
+        >
+          Store
+        </Badge>
+      </TableCell>
       <TableCell className="font-mono text-xs text-muted-foreground max-w-[120px] truncate">
         {order.id.slice(0, 16)}...
       </TableCell>
@@ -82,6 +99,9 @@ function OrderRow({ order }: { order: StoreOrder }) {
         <div>
           <p className="font-medium text-foreground">{order.customerName}</p>
           <p className="text-xs text-muted-foreground">{order.email}</p>
+          {order.phone && (
+            <p className="text-xs text-muted-foreground">{order.phone}</p>
+          )}
         </div>
       </TableCell>
       <TableCell>
@@ -140,24 +160,113 @@ function OrderRow({ order }: { order: StoreOrder }) {
   );
 }
 
+function CustomOrderRow({ order }: { order: CustomOrder }) {
+  return (
+    <TableRow>
+      <TableCell>
+        <Badge
+          variant="outline"
+          className="text-xs bg-orange-500/10 text-orange-600 border-orange-500/20"
+        >
+          Custom
+        </Badge>
+      </TableCell>
+      <TableCell className="font-mono text-xs text-muted-foreground max-w-[120px] truncate">
+        {order.id.slice(0, 16)}...
+      </TableCell>
+      <TableCell>
+        <div>
+          <p className="font-medium text-foreground">{order.name}</p>
+          {order.email && (
+            <p className="text-xs text-muted-foreground">{order.email}</p>
+          )}
+          {order.phone && (
+            <p className="text-xs text-muted-foreground">{order.phone}</p>
+          )}
+        </div>
+      </TableCell>
+      <TableCell>
+        <div>
+          <p className="text-sm font-medium text-foreground">Custom Request</p>
+          <p className="text-xs text-muted-foreground line-clamp-2 max-w-[180px]">
+            {order.description}
+          </p>
+        </div>
+      </TableCell>
+      <TableCell>
+        <StatusBadge status="custom" />
+      </TableCell>
+      <TableCell className="text-xs text-muted-foreground">—</TableCell>
+      <TableCell>
+        {order.modelFile ? (
+          <a
+            href={order.modelFile.getDirectURL()}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+          >
+            View File <ExternalLink className="h-3 w-3" />
+          </a>
+        ) : (
+          <span className="text-xs text-muted-foreground">None</span>
+        )}
+      </TableCell>
+      <TableCell>
+        <span className="text-xs text-muted-foreground italic">
+          Contact customer
+        </span>
+      </TableCell>
+    </TableRow>
+  );
+}
+
 export default function OrdersManagement() {
-  const { data: orders, isLoading } = useGetAllStoreOrders();
+  const { data: storeOrders, isLoading: loadingStore } = useGetAllStoreOrders();
+  const { data: customOrders, isLoading: loadingCustom } =
+    useGetAllCustomOrders();
+  const [orderTypeFilter, setOrderTypeFilter] = useState<
+    "all" | "store" | "custom"
+  >("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  const filteredOrders = orders
-    ? statusFilter === "all"
-      ? orders
-      : orders.filter((o) => o.status === statusFilter)
-    : [];
+  const isLoading = loadingStore || loadingCustom;
 
-  const sortedOrders = [...filteredOrders].sort(
-    (a, b) => Number(b.timestamp) - Number(a.timestamp),
-  );
+  // Combined view
+  type Row =
+    | { kind: "store"; order: StoreOrder }
+    | { kind: "custom"; order: CustomOrder };
 
-  // Stats
+  const allRows: Row[] = [
+    ...(storeOrders ?? []).map((o): Row => ({ kind: "store", order: o })),
+    ...(customOrders ?? []).map((o): Row => ({ kind: "custom", order: o })),
+  ];
+
+  const filtered = allRows.filter((row) => {
+    if (orderTypeFilter === "store" && row.kind !== "store") return false;
+    if (orderTypeFilter === "custom" && row.kind !== "custom") return false;
+    if (
+      statusFilter !== "all" &&
+      row.kind === "store" &&
+      row.order.status !== statusFilter
+    )
+      return false;
+    return true;
+  });
+
+  // Sort store orders by timestamp desc; custom orders don't have timestamps so they go last
+  const sorted = [...filtered].sort((a, b) => {
+    const tsA = a.kind === "store" ? Number(a.order.timestamp) : 0;
+    const tsB = b.kind === "store" ? Number(b.order.timestamp) : 0;
+    return tsB - tsA;
+  });
+
+  const storeCount = storeOrders?.length ?? 0;
+  const customCount = customOrders?.length ?? 0;
+  const totalCount = storeCount + customCount;
+
   const stats = STATUS_OPTIONS.reduce(
     (acc, s) => {
-      acc[s] = orders?.filter((o) => o.status === s).length ?? 0;
+      acc[s] = storeOrders?.filter((o) => o.status === s).length ?? 0;
       return acc;
     },
     {} as Record<string, number>,
@@ -167,46 +276,52 @@ export default function OrdersManagement() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-foreground">Orders</h2>
+          <h2 className="text-xl font-semibold text-foreground">All Orders</h2>
           <p className="text-sm text-muted-foreground">
-            {orders?.length ?? 0} total order
-            {(orders?.length ?? 0) !== 1 ? "s" : ""}
+            {totalCount} total order{totalCount !== 1 ? "s" : ""} ({storeCount}{" "}
+            store, {customCount} custom)
           </p>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        {STATUS_OPTIONS.map((s) => (
-          <Card
-            key={s}
-            className={`cursor-pointer transition-colors ${statusFilter === s ? "border-primary" : ""}`}
-            onClick={() => setStatusFilter(statusFilter === s ? "all" : s)}
+      {/* Order type filter */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-sm text-muted-foreground">Type:</span>
+        {(["all", "store", "custom"] as const).map((t) => (
+          <Button
+            key={t}
+            variant={orderTypeFilter === t ? "default" : "outline"}
+            size="sm"
+            onClick={() => setOrderTypeFilter(t)}
+            className="capitalize"
           >
-            <CardContent className="p-3 text-center">
-              <p className="text-2xl font-bold text-foreground">{stats[s]}</p>
-              <p className="text-xs text-muted-foreground capitalize">{s}</p>
-            </CardContent>
-          </Card>
+            {t === "all"
+              ? "All"
+              : t === "store"
+                ? `Store (${storeCount})`
+                : `Custom (${customCount})`}
+          </Button>
         ))}
-      </div>
 
-      {/* Filter */}
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Filter:</span>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-36 h-8 text-sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Orders</SelectItem>
-            {STATUS_OPTIONS.map((s) => (
-              <SelectItem key={s} value={s} className="capitalize">
-                {s.charAt(0).toUpperCase() + s.slice(1)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {orderTypeFilter !== "custom" && (
+          <>
+            <span className="text-sm text-muted-foreground ml-4">Status:</span>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-36 h-8 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                {STATUS_OPTIONS.map((s) => (
+                  <SelectItem key={s} value={s} className="capitalize">
+                    {s.charAt(0).toUpperCase() + s.slice(1)}
+                    {stats[s] > 0 ? ` (${stats[s]})` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
+        )}
       </div>
 
       {isLoading && (
@@ -217,39 +332,46 @@ export default function OrdersManagement() {
         </div>
       )}
 
-      {!isLoading && sortedOrders.length === 0 && (
+      {!isLoading && sorted.length === 0 && (
         <div className="text-center py-16 space-y-3">
           <div className="flex justify-center">
             <div className="p-4 rounded-full bg-muted">
               <ShoppingBag className="h-10 w-10 text-muted-foreground" />
             </div>
           </div>
-          <p className="text-muted-foreground">
-            {statusFilter === "all"
-              ? "No orders yet."
-              : `No ${statusFilter} orders.`}
-          </p>
+          <p className="text-muted-foreground">No orders found.</p>
         </div>
       )}
 
-      {!isLoading && sortedOrders.length > 0 && (
+      {!isLoading && sorted.length > 0 && (
         <div className="rounded-lg border border-border overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Type</TableHead>
                 <TableHead>Order ID</TableHead>
                 <TableHead>Customer</TableHead>
-                <TableHead>Product</TableHead>
+                <TableHead>Product / Description</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Date</TableHead>
-                <TableHead>Payment</TableHead>
-                <TableHead>Update Status</TableHead>
+                <TableHead>File / Payment</TableHead>
+                <TableHead>Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedOrders.map((order) => (
-                <OrderRow key={order.id} order={order} />
-              ))}
+              {sorted.map((row) =>
+                row.kind === "store" ? (
+                  <StoreOrderRow
+                    key={`store-${row.order.id}`}
+                    order={row.order}
+                  />
+                ) : (
+                  <CustomOrderRow
+                    key={`custom-${row.order.id}`}
+                    order={row.order}
+                  />
+                ),
+              )}
             </TableBody>
           </Table>
         </div>

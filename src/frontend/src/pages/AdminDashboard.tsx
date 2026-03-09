@@ -12,8 +12,9 @@ import OrdersManagement from "../components/admin/OrdersManagement";
 import PaymentsManagement from "../components/admin/PaymentsManagement";
 import ProductsManagement from "../components/admin/ProductsManagement";
 import { useAuth } from "../hooks/useAuth";
+import { ensureAdminRegistered, resetAdminSession } from "../hooks/useQueries";
 
-/** Get the latest actor from the query cache (avoids stale closure issues). */
+/** Get the latest actor from the query cache. */
 function getActorFromCache(
   queryClient: ReturnType<typeof useQueryClient>,
 ): backendInterface | null {
@@ -35,6 +36,7 @@ export default function AdminDashboard() {
   const [loginEmail, setLoginEmail] = useState("lanepeevy@gmail.com");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState("");
+  const [isRegistering, setIsRegistering] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,55 +46,46 @@ export default function AdminDashboard() {
       setLoginError("Invalid email or password. Please try again.");
       return;
     }
-    // After successful login, bootstrap the admin principal with the backend.
-    // Use verifyAndEnsureAdminStatus first (the backend's own bootstrapping
-    // method that recognises the hardcoded admin email without requiring the
-    // caller to already be admin). Fall back to saveCallerUserProfile.
+
+    // After login, immediately register admin with backend.
+    // Wait for actor to be available, then call saveCallerUserProfile.
     if (loginEmail.toLowerCase() === "lanepeevy@gmail.com") {
-      let attempts = 0;
-      const maxAttempts = 15;
-      const tryRegister = async (): Promise<void> => {
-        const freshActor = getActorFromCache(queryClient);
-        if (freshActor) {
-          // Try verifyAndEnsureAdminStatus first
-          try {
-            const verified = await freshActor.verifyAndEnsureAdminStatus();
-            if (verified) return;
-          } catch {
-            // fall through to saveCallerUserProfile
-          }
-          // Fallback: directly save admin profile
-          try {
-            await freshActor.saveCallerUserProfile({
-              email: "lanepeevy@gmail.com",
-              name: "Lane Peevy",
-              isAdmin: true,
-            });
-          } catch (_err) {
-            // Will be retried on each admin action
-          }
-        } else if (attempts < maxAttempts) {
-          attempts++;
-          await new Promise((resolve) => setTimeout(resolve, 400));
-          await tryRegister();
+      setIsRegistering(true);
+      try {
+        // Poll for the actor to become available (max 10s)
+        const start = Date.now();
+        let actor: backendInterface | null = null;
+        while (Date.now() - start < 10000) {
+          actor = getActorFromCache(queryClient);
+          if (actor) break;
+          await new Promise((resolve) => setTimeout(resolve, 300));
         }
-      };
-      tryRegister();
+        if (actor) {
+          await ensureAdminRegistered(actor);
+        }
+      } catch {
+        // Non-fatal — ensureAdminRegistered will also run before each admin action
+      } finally {
+        setIsRegistering(false);
+      }
     }
   };
 
   const handleLogout = () => {
+    resetAdminSession();
     logout();
     navigate({ to: "/" });
   };
 
-  // Still loading auth state
-  if (isLoading) {
+  // Still loading auth state or registering admin
+  if (isLoading || isRegistering) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
           <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto" />
-          <p className="text-muted-foreground">Loading...</p>
+          <p className="text-muted-foreground">
+            {isRegistering ? "Setting up admin access..." : "Loading..."}
+          </p>
         </div>
       </div>
     );

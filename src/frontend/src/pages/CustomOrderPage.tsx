@@ -10,18 +10,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
-import { AlertCircle, FileCheck, Loader2, LogIn, Upload } from "lucide-react";
+import { AlertCircle, FileCheck, Loader2, Upload } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ExternalBlob } from "../backend";
-import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useSubmitCustomOrder } from "../hooks/useQueries";
 
 export default function CustomOrderPage() {
-  const { identity, login, loginStatus } = useInternetIdentity();
-  const isAuthenticated = !!identity;
-  const isLoggingIn = loginStatus === "logging-in";
-
   const submitOrder = useSubmitCustomOrder();
 
   const [name, setName] = useState("");
@@ -93,47 +88,16 @@ export default function CustomOrderPage() {
       setDescription("");
       setModelFile(null);
       setUploadProgress(0);
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to submit order. Please try again.");
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Failed to submit order. Please try again.";
+      toast.error(message);
     } finally {
       setIsUploading(false);
     }
   };
-
-  if (!isAuthenticated) {
-    return (
-      <div className="max-w-lg mx-auto px-4 py-20 text-center space-y-6">
-        <div className="flex justify-center">
-          <div className="p-4 rounded-full bg-primary/10">
-            <LogIn className="h-12 w-12 text-primary" />
-          </div>
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            Sign In Required
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Please sign in to submit a custom order request.
-          </p>
-        </div>
-        <Button
-          onClick={login}
-          disabled={isLoggingIn}
-          size="lg"
-          className="w-full"
-        >
-          {isLoggingIn ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              Signing in...
-            </>
-          ) : (
-            "Sign In with Internet Identity"
-          )}
-        </Button>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
@@ -163,6 +127,7 @@ export default function CustomOrderPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
+                data-ocid="custom_order.name.input"
               />
             </div>
 
@@ -176,6 +141,7 @@ export default function CustomOrderPage() {
                   placeholder="your@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  data-ocid="custom_order.email.input"
                 />
               </div>
               <div className="space-y-2">
@@ -186,6 +152,7 @@ export default function CustomOrderPage() {
                   placeholder="+1 (555) 000-0000"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
+                  data-ocid="custom_order.phone.input"
                 />
               </div>
             </div>
@@ -208,6 +175,7 @@ export default function CustomOrderPage() {
                 onChange={(e) => setDescription(e.target.value)}
                 rows={5}
                 required
+                data-ocid="custom_order.description.textarea"
               />
             </div>
 
@@ -222,7 +190,11 @@ export default function CustomOrderPage() {
                   onChange={handleFileChange}
                   className="hidden"
                 />
-                <label htmlFor="model-file" className="cursor-pointer">
+                <label
+                  htmlFor="model-file"
+                  className="cursor-pointer"
+                  data-ocid="custom_order.upload_button"
+                >
                   {modelFile ? (
                     <div className="flex items-center justify-center gap-2 text-primary">
                       <FileCheck className="h-5 w-5" />
@@ -254,6 +226,7 @@ export default function CustomOrderPage() {
               type="submit"
               className="w-full"
               disabled={submitOrder.isPending || isUploading}
+              data-ocid="custom_order.submit_button"
             >
               {submitOrder.isPending || isUploading ? (
                 <>

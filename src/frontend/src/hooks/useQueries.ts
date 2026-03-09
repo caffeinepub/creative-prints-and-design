@@ -12,13 +12,10 @@ import { useActor } from "./useActor";
 
 /**
  * Retrieves the latest actor directly from the React Query cache.
- * This avoids stale closure bugs where mutation functions capture a null actor
- * from the render snapshot before the actor query has resolved.
  */
 function getActorFromCache(
   queryClient: ReturnType<typeof useQueryClient>,
 ): backendInterface | null {
-  // The actor is stored under ["actor", principalString] — query for any key starting with "actor"
   const queries = queryClient.getQueriesData<backendInterface>({
     queryKey: ["actor"],
   });
@@ -30,7 +27,6 @@ function getActorFromCache(
 
 /**
  * Polls until the actor is available or the timeout expires.
- * This prevents "Actor not available" errors during the brief init window.
  */
 async function waitForActor(
   getActor: () => backendInterface | null,
@@ -49,27 +45,18 @@ async function waitForActor(
 
 const ADMIN_EMAIL = "lanepeevy@gmail.com";
 
+// Track whether admin has been registered this session to avoid redundant calls.
+let adminRegisteredThisSession = false;
+
 /**
- * Ensures the current caller is registered as the guaranteed admin before
- * performing any admin action.
- *
- * Strategy:
- * 1. Try `verifyAndEnsureAdminStatus()` — the backend's own bootstrapping method
- *    that recognises the hardcoded admin email without requiring the caller to be
- *    admin first.
- * 2. If that fails or returns false, fall back to `saveCallerUserProfile` with
- *    isAdmin:true (works when the backend already trusts the principal).
- *
- * Errors are swallowed here — the subsequent admin action itself will surface any
- * authorisation failure with a clear message.
+ * Ensures the current caller is registered as the guaranteed admin.
+ * Always calls saveCallerUserProfile which triggers bootstrapGuaranteedAdmin
+ * on the backend, storing the caller's principal as the permanent admin.
  */
-async function ensureAdminRegistered(actor: backendInterface): Promise<void> {
-  try {
-    const verified = await actor.verifyAndEnsureAdminStatus();
-    if (verified) return;
-  } catch {
-    // verifyAndEnsureAdminStatus not available or threw — try fallback
-  }
+export async function ensureAdminRegistered(
+  actor: backendInterface,
+): Promise<void> {
+  if (adminRegisteredThisSession) return;
 
   try {
     await actor.saveCallerUserProfile({
@@ -77,15 +64,27 @@ async function ensureAdminRegistered(actor: backendInterface): Promise<void> {
       name: "Lane Peevy",
       isAdmin: true,
     });
+    adminRegisteredThisSession = true;
   } catch {
-    // Swallow — the action itself will fail with an explicit error if not authorised
+    // saveCallerUserProfile failed; try verifyAndEnsureAdminStatus as fallback
+    try {
+      const ok = await actor.verifyAndEnsureAdminStatus();
+      if (ok) adminRegisteredThisSession = true;
+    } catch {
+      // Both failed — the action itself will surface the error
+    }
   }
 }
 
 /**
+ * Resets the admin registration flag (call on logout).
+ */
+export function resetAdminSession(): void {
+  adminRegisteredThisSession = false;
+}
+
+/**
  * Gets an actor that is pre-registered as the admin principal.
- * Use this instead of waitForActor for all admin mutation calls.
- * Uses the queryClient to fetch the freshest actor from cache (avoids stale closures).
  */
 async function waitForAdminActor(
   queryClient: ReturnType<typeof useQueryClient>,
