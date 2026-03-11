@@ -10,6 +10,8 @@ import MixinStorage "blob-storage/Mixin";
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
 
+
+
 actor {
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
@@ -20,13 +22,13 @@ actor {
   // Persists across canister upgrades so auth works immediately after deploy.
   stable var guaranteedAdminPrincipal : ?Principal = null;
 
-  var emailToPrincipal = Map.empty<Text, Principal>();
-  var userProfiles = Map.empty<Principal, UserProfile>();
-  var products = Map.empty<Text, Product>();
-  var galleryItems = Map.empty<Text, GalleryItem>();
-  var customOrders = Map.empty<Text, CustomOrder>();
-  var storeOrders = Map.empty<Text, StoreOrder>();
-  var paymentConfirmations = Map.empty<Text, PaymentConfirmation>();
+  let emailToPrincipal = Map.empty<Text, Principal>();
+  let userProfiles = Map.empty<Principal, UserProfile>();
+  let products = Map.empty<Text, Product>();
+  let galleryItems = Map.empty<Text, GalleryItem>();
+  let customOrders = Map.empty<Text, CustomOrder>();
+  let storeOrders = Map.empty<Text, StoreOrder>();
+  let paymentConfirmations = Map.empty<Text, PaymentConfirmation>();
 
   include MixinStorage();
 
@@ -374,6 +376,18 @@ actor {
         storeOrders.add(id, updatedOrder);
       };
     };
+  };
+
+  public shared ({ caller }) func deleteStoreOrder(id : Text) : async () {
+    requireAdminUpdate(caller);
+    if (not storeOrders.containsKey(id)) { Runtime.trap("Order does not exist") };
+    storeOrders.remove(id);
+  };
+
+  public shared ({ caller }) func deleteCustomOrder(id : Text) : async () {
+    requireAdminUpdate(caller);
+    if (not customOrders.containsKey(id)) { Runtime.trap("Order does not exist") };
+    customOrders.remove(id);
   };
 
   public shared (_) func submitPaymentConfirmation(id : Text, customerName : Text, orderId : Text, proofFile : Storage.ExternalBlob) : async () {

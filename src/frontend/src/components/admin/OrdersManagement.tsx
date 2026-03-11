@@ -1,6 +1,21 @@
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -8,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -17,16 +33,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  ExternalLink,
-  Loader2,
-  MessageSquare,
-  ShoppingBag,
-} from "lucide-react";
+import { ExternalLink, Loader2, ShoppingBag, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import type { CustomOrder, StoreOrder } from "../../backend";
 import {
+  useDeleteCustomOrder,
+  useDeleteStoreOrder,
   useGetAllCustomOrders,
   useGetAllStoreOrders,
   useUpdateStoreOrderStatus,
@@ -62,163 +75,502 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function StoreOrderRow({ order }: { order: StoreOrder }) {
+// ---- Detail Modal for Store Order ----
+function StoreOrderDetailModal({
+  order,
+  open,
+  onClose,
+  onDelete,
+}: {
+  order: StoreOrder;
+  open: boolean;
+  onClose: () => void;
+  onDelete: () => void;
+}) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const deleteOrder = useDeleteStoreOrder();
   const updateStatus = useUpdateStoreOrderStatus();
   const [updating, setUpdating] = useState(false);
+  const date = new Date(Number(order.timestamp) / 1_000_000);
+
+  const handleDelete = async () => {
+    try {
+      await deleteOrder.mutateAsync(order.id);
+      toast.success("Order deleted");
+      setConfirmDelete(false);
+      onDelete();
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to delete order",
+      );
+    }
+  };
 
   const handleStatusChange = async (newStatus: string) => {
     try {
       setUpdating(true);
       await updateStatus.mutateAsync({ id: order.id, status: newStatus });
-      toast.success(`Order status updated to ${newStatus}`);
+      toast.success(`Status updated to ${newStatus}`);
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Failed to update status";
-      toast.error(message);
+      toast.error(
+        err instanceof Error ? err.message : "Failed to update status",
+      );
     } finally {
       setUpdating(false);
     }
   };
 
+  return (
+    <>
+      <Dialog
+        open={open}
+        onOpenChange={(o) => {
+          if (!o) onClose();
+        }}
+      >
+        <DialogContent
+          className="max-w-lg"
+          data-ocid="orders.store_detail.modal"
+        >
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Badge
+                variant="outline"
+                className="text-xs bg-blue-500/10 text-blue-600 border-blue-500/20"
+              >
+                Store Order
+              </Badge>
+              Order Details
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 text-sm">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-xs text-muted-foreground mb-0.5">Order ID</p>
+                <p className="font-mono text-xs break-all">{order.id}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-0.5">Date</p>
+                <p>
+                  {date.toLocaleDateString()} {date.toLocaleTimeString()}
+                </p>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Customer</p>
+              <p className="font-medium">{order.customerName}</p>
+              <p className="text-muted-foreground">{order.email}</p>
+              {order.phone && (
+                <p className="text-muted-foreground">{order.phone}</p>
+              )}
+            </div>
+
+            <Separator />
+
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Product</p>
+              <p className="font-medium">{order.productName}</p>
+              <p className="text-muted-foreground">
+                {order.productDescription}
+              </p>
+              <p className="font-semibold mt-1">
+                ${(Number(order.productPrice) / 100).toFixed(2)}
+              </p>
+            </div>
+
+            <Separator />
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Status</p>
+                <StatusBadge status={order.status} />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">
+                  Change Status
+                </p>
+                <Select
+                  value={order.status}
+                  onValueChange={handleStatusChange}
+                  disabled={updating}
+                >
+                  <SelectTrigger
+                    className="h-8 w-36 text-xs"
+                    data-ocid="orders.store_detail.select"
+                  >
+                    {updating ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <SelectValue />
+                    )}
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_OPTIONS.map((s) => (
+                      <SelectItem key={s} value={s} className="text-xs">
+                        {s.charAt(0).toUpperCase() + s.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {order.paymentProof && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">
+                  Payment Proof
+                </p>
+                <a
+                  href={order.paymentProof.getDirectURL()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                >
+                  View Payment Proof <ExternalLink className="h-3 w-3" />
+                </a>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-between pt-2">
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setConfirmDelete(true)}
+              data-ocid="orders.store_detail.delete_button"
+            >
+              <Trash2 className="h-4 w-4 mr-1" /> Delete Order
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onClose}
+              data-ocid="orders.store_detail.close_button"
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent data-ocid="orders.store_delete.dialog">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this order?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove the order for{" "}
+              <strong>{order.customerName}</strong>. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-ocid="orders.store_delete.cancel_button">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-ocid="orders.store_delete.confirm_button"
+            >
+              {deleteOrder.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
+// ---- Detail Modal for Custom Order ----
+function CustomOrderDetailModal({
+  order,
+  open,
+  onClose,
+  onDelete,
+}: {
+  order: CustomOrder;
+  open: boolean;
+  onClose: () => void;
+  onDelete: () => void;
+}) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const deleteOrder = useDeleteCustomOrder();
+
+  const handleDelete = async () => {
+    try {
+      await deleteOrder.mutateAsync(order.id);
+      toast.success("Order deleted");
+      setConfirmDelete(false);
+      onDelete();
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to delete order",
+      );
+    }
+  };
+
+  return (
+    <>
+      <Dialog
+        open={open}
+        onOpenChange={(o) => {
+          if (!o) onClose();
+        }}
+      >
+        <DialogContent
+          className="max-w-lg"
+          data-ocid="orders.custom_detail.modal"
+        >
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Badge
+                variant="outline"
+                className="text-xs bg-orange-500/10 text-orange-600 border-orange-500/20"
+              >
+                Custom Order
+              </Badge>
+              Order Details
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 text-sm">
+            <div>
+              <p className="text-xs text-muted-foreground mb-0.5">Order ID</p>
+              <p className="font-mono text-xs break-all">{order.id}</p>
+            </div>
+
+            <Separator />
+
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Customer</p>
+              <p className="font-medium">{order.name}</p>
+              {order.email && (
+                <p className="text-muted-foreground">{order.email}</p>
+              )}
+              {order.phone && (
+                <p className="text-muted-foreground">{order.phone}</p>
+              )}
+            </div>
+
+            <Separator />
+
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">
+                Description / Request
+              </p>
+              <p className="whitespace-pre-wrap leading-relaxed">
+                {order.description}
+              </p>
+            </div>
+
+            {order.modelFile && (
+              <>
+                <Separator />
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">
+                    Attached File
+                  </p>
+                  <a
+                    href={order.modelFile.getDirectURL()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                  >
+                    View / Download File <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="flex justify-between pt-2">
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setConfirmDelete(true)}
+              data-ocid="orders.custom_detail.delete_button"
+            >
+              <Trash2 className="h-4 w-4 mr-1" /> Delete Order
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onClose}
+              data-ocid="orders.custom_detail.close_button"
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent data-ocid="orders.custom_delete.dialog">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this order?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove the custom order from{" "}
+              <strong>{order.name}</strong>. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-ocid="orders.custom_delete.cancel_button">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-ocid="orders.custom_delete.confirm_button"
+            >
+              {deleteOrder.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
+// ---- Row Components ----
+
+function StoreOrderRow({
+  order,
+  index,
+}: {
+  order: StoreOrder;
+  index: number;
+}) {
+  const [open, setOpen] = useState(false);
   const date = new Date(Number(order.timestamp) / 1_000_000);
 
   return (
-    <TableRow>
-      <TableCell>
-        <Badge
-          variant="outline"
-          className="text-xs bg-blue-500/10 text-blue-600 border-blue-500/20"
-        >
-          Store
-        </Badge>
-      </TableCell>
-      <TableCell className="font-mono text-xs text-muted-foreground max-w-[120px] truncate">
-        {order.id.slice(0, 16)}...
-      </TableCell>
-      <TableCell>
-        <div>
-          <p className="font-medium text-foreground">{order.customerName}</p>
-          <p className="text-xs text-muted-foreground">{order.email}</p>
-          {order.phone && (
-            <p className="text-xs text-muted-foreground">{order.phone}</p>
-          )}
-        </div>
-      </TableCell>
-      <TableCell>
-        <div>
+    <>
+      <TableRow
+        className="cursor-pointer hover:bg-muted/50 transition-colors"
+        onClick={() => setOpen(true)}
+        data-ocid={`orders.store_row.item.${index}`}
+      >
+        <TableCell>
+          <Badge
+            variant="outline"
+            className="text-xs bg-blue-500/10 text-blue-600 border-blue-500/20"
+          >
+            Store
+          </Badge>
+        </TableCell>
+        <TableCell className="font-mono text-xs text-muted-foreground max-w-[100px] truncate">
+          {order.id.slice(0, 12)}...
+        </TableCell>
+        <TableCell>
+          <div>
+            <p className="font-medium text-foreground">{order.customerName}</p>
+            <p className="text-xs text-muted-foreground">{order.email}</p>
+          </div>
+        </TableCell>
+        <TableCell>
           <p className="text-sm font-medium text-foreground">
             {order.productName}
           </p>
           <p className="text-xs text-muted-foreground">
             ${(Number(order.productPrice) / 100).toFixed(2)}
           </p>
-        </div>
-      </TableCell>
-      <TableCell>
-        <StatusBadge status={order.status} />
-      </TableCell>
-      <TableCell className="text-xs text-muted-foreground">
-        {date.toLocaleDateString()}
-      </TableCell>
-      <TableCell>
-        {order.paymentProof ? (
-          <a
-            href={order.paymentProof.getDirectURL()}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-          >
-            View <ExternalLink className="h-3 w-3" />
-          </a>
-        ) : (
-          <span className="text-xs text-muted-foreground">None</span>
-        )}
-      </TableCell>
-      <TableCell>
-        <Select
-          value={order.status}
-          onValueChange={handleStatusChange}
-          disabled={updating}
-        >
-          <SelectTrigger className="h-8 w-32 text-xs">
-            {updating ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              <SelectValue />
-            )}
-          </SelectTrigger>
-          <SelectContent>
-            {STATUS_OPTIONS.map((s) => (
-              <SelectItem key={s} value={s} className="text-xs">
-                {s.charAt(0).toUpperCase() + s.slice(1)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </TableCell>
-    </TableRow>
+        </TableCell>
+        <TableCell>
+          <StatusBadge status={order.status} />
+        </TableCell>
+        <TableCell className="text-xs text-muted-foreground">
+          {date.toLocaleDateString()}
+        </TableCell>
+        <TableCell className="text-xs text-primary">Click to view</TableCell>
+      </TableRow>
+
+      {open && (
+        <StoreOrderDetailModal
+          order={order}
+          open={open}
+          onClose={() => setOpen(false)}
+          onDelete={() => setOpen(false)}
+        />
+      )}
+    </>
   );
 }
 
-function CustomOrderRow({ order }: { order: CustomOrder }) {
+function CustomOrderRow({
+  order,
+  index,
+}: {
+  order: CustomOrder;
+  index: number;
+}) {
+  const [open, setOpen] = useState(false);
+
   return (
-    <TableRow>
-      <TableCell>
-        <Badge
-          variant="outline"
-          className="text-xs bg-orange-500/10 text-orange-600 border-orange-500/20"
-        >
-          Custom
-        </Badge>
-      </TableCell>
-      <TableCell className="font-mono text-xs text-muted-foreground max-w-[120px] truncate">
-        {order.id.slice(0, 16)}...
-      </TableCell>
-      <TableCell>
-        <div>
-          <p className="font-medium text-foreground">{order.name}</p>
-          {order.email && (
-            <p className="text-xs text-muted-foreground">{order.email}</p>
-          )}
-          {order.phone && (
-            <p className="text-xs text-muted-foreground">{order.phone}</p>
-          )}
-        </div>
-      </TableCell>
-      <TableCell>
-        <div>
+    <>
+      <TableRow
+        className="cursor-pointer hover:bg-muted/50 transition-colors"
+        onClick={() => setOpen(true)}
+        data-ocid={`orders.custom_row.item.${index}`}
+      >
+        <TableCell>
+          <Badge
+            variant="outline"
+            className="text-xs bg-orange-500/10 text-orange-600 border-orange-500/20"
+          >
+            Custom
+          </Badge>
+        </TableCell>
+        <TableCell className="font-mono text-xs text-muted-foreground max-w-[100px] truncate">
+          {order.id.slice(0, 12)}...
+        </TableCell>
+        <TableCell>
+          <div>
+            <p className="font-medium text-foreground">{order.name}</p>
+            {order.email && (
+              <p className="text-xs text-muted-foreground">{order.email}</p>
+            )}
+            {order.phone && (
+              <p className="text-xs text-muted-foreground">{order.phone}</p>
+            )}
+          </div>
+        </TableCell>
+        <TableCell>
           <p className="text-sm font-medium text-foreground">Custom Request</p>
-          <p className="text-xs text-muted-foreground line-clamp-2 max-w-[180px]">
+          <p className="text-xs text-muted-foreground line-clamp-1 max-w-[160px]">
             {order.description}
           </p>
-        </div>
-      </TableCell>
-      <TableCell>
-        <StatusBadge status="custom" />
-      </TableCell>
-      <TableCell className="text-xs text-muted-foreground">—</TableCell>
-      <TableCell>
-        {order.modelFile ? (
-          <a
-            href={order.modelFile.getDirectURL()}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-          >
-            View File <ExternalLink className="h-3 w-3" />
-          </a>
-        ) : (
-          <span className="text-xs text-muted-foreground">None</span>
-        )}
-      </TableCell>
-      <TableCell>
-        <span className="text-xs text-muted-foreground italic">
-          Contact customer
-        </span>
-      </TableCell>
-    </TableRow>
+        </TableCell>
+        <TableCell>
+          <StatusBadge status="custom" />
+        </TableCell>
+        <TableCell className="text-xs text-muted-foreground">—</TableCell>
+        <TableCell className="text-xs text-primary">Click to view</TableCell>
+      </TableRow>
+
+      {open && (
+        <CustomOrderDetailModal
+          order={order}
+          open={open}
+          onClose={() => setOpen(false)}
+          onDelete={() => setOpen(false)}
+        />
+      )}
+    </>
   );
 }
+
+// ---- Main Component ----
 
 export default function OrdersManagement() {
   const { data: storeOrders, isLoading: loadingStore } = useGetAllStoreOrders();
@@ -231,7 +583,6 @@ export default function OrdersManagement() {
 
   const isLoading = loadingStore || loadingCustom;
 
-  // Combined view
   type Row =
     | { kind: "store"; order: StoreOrder }
     | { kind: "custom"; order: CustomOrder };
@@ -253,7 +604,6 @@ export default function OrdersManagement() {
     return true;
   });
 
-  // Sort store orders by timestamp desc; custom orders don't have timestamps so they go last
   const sorted = [...filtered].sort((a, b) => {
     const tsA = a.kind === "store" ? Number(a.order.timestamp) : 0;
     const tsB = b.kind === "store" ? Number(b.order.timestamp) : 0;
@@ -272,6 +622,9 @@ export default function OrdersManagement() {
     {} as Record<string, number>,
   );
 
+  let storeIdx = 0;
+  let customIdx = 0;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -281,10 +634,13 @@ export default function OrdersManagement() {
             {totalCount} total order{totalCount !== 1 ? "s" : ""} ({storeCount}{" "}
             store, {customCount} custom)
           </p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Click any row to see full details and delete
+          </p>
         </div>
       </div>
 
-      {/* Order type filter */}
+      {/* Filters */}
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-sm text-muted-foreground">Type:</span>
         {(["all", "store", "custom"] as const).map((t) => (
@@ -294,6 +650,7 @@ export default function OrdersManagement() {
             size="sm"
             onClick={() => setOrderTypeFilter(t)}
             className="capitalize"
+            data-ocid={`orders.type_filter.${t}`}
           >
             {t === "all"
               ? "All"
@@ -307,7 +664,10 @@ export default function OrdersManagement() {
           <>
             <span className="text-sm text-muted-foreground ml-4">Status:</span>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-36 h-8 text-sm">
+              <SelectTrigger
+                className="w-36 h-8 text-sm"
+                data-ocid="orders.status_filter.select"
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -325,7 +685,7 @@ export default function OrdersManagement() {
       </div>
 
       {isLoading && (
-        <div className="space-y-2">
+        <div className="space-y-2" data-ocid="orders.loading_state">
           {["sk1", "sk2", "sk3", "sk4", "sk5"].map((sk) => (
             <Skeleton key={sk} className="h-14 w-full" />
           ))}
@@ -333,7 +693,10 @@ export default function OrdersManagement() {
       )}
 
       {!isLoading && sorted.length === 0 && (
-        <div className="text-center py-16 space-y-3">
+        <div
+          className="text-center py-16 space-y-3"
+          data-ocid="orders.empty_state"
+        >
           <div className="flex justify-center">
             <div className="p-4 rounded-full bg-muted">
               <ShoppingBag className="h-10 w-10 text-muted-foreground" />
@@ -345,7 +708,7 @@ export default function OrdersManagement() {
 
       {!isLoading && sorted.length > 0 && (
         <div className="rounded-lg border border-border overflow-hidden">
-          <Table>
+          <Table data-ocid="orders.table">
             <TableHeader>
               <TableRow>
                 <TableHead>Type</TableHead>
@@ -354,8 +717,7 @@ export default function OrdersManagement() {
                 <TableHead>Product / Description</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Date</TableHead>
-                <TableHead>File / Payment</TableHead>
-                <TableHead>Action</TableHead>
+                <TableHead>Details</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -364,11 +726,13 @@ export default function OrdersManagement() {
                   <StoreOrderRow
                     key={`store-${row.order.id}`}
                     order={row.order}
+                    index={++storeIdx}
                   />
                 ) : (
                   <CustomOrderRow
                     key={`custom-${row.order.id}`}
                     order={row.order}
+                    index={++customIdx}
                   />
                 ),
               )}

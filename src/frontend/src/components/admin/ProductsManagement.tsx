@@ -9,7 +9,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -57,16 +58,158 @@ const defaultForm: ProductFormData = {
   imageFile: null,
 };
 
+// ---- Product Detail Modal ----
+function ProductDetailModal({
+  product,
+  open,
+  onClose,
+  onEdit,
+  onDelete,
+}: {
+  product: Product;
+  open: boolean;
+  onClose: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const deleteProduct = useDeleteProduct();
+
+  const handleDelete = async () => {
+    try {
+      await deleteProduct.mutateAsync(product.id);
+      toast.success("Product deleted");
+      setConfirmDelete(false);
+      onDelete();
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to delete product",
+      );
+    }
+  };
+
+  return (
+    <>
+      <Dialog
+        open={open}
+        onOpenChange={(o) => {
+          if (!o) onClose();
+        }}
+      >
+        <DialogContent className="max-w-lg" data-ocid="products.detail.modal">
+          <DialogHeader>
+            <DialogTitle>Product Details</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 text-sm">
+            <div className="rounded-lg overflow-hidden border border-border aspect-video bg-muted">
+              <img
+                src={product.image.getDirectURL()}
+                alt={product.name}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src =
+                    "/assets/generated/sample-prototype.dim_400x400.jpg";
+                }}
+              />
+            </div>
+
+            <div>
+              <p className="text-xs text-muted-foreground mb-0.5">Name</p>
+              <p className="font-semibold text-foreground text-base">
+                {product.name}
+              </p>
+            </div>
+
+            <Separator />
+
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Description</p>
+              <p className="whitespace-pre-wrap leading-relaxed text-foreground">
+                {product.description}
+              </p>
+            </div>
+
+            <Separator />
+
+            <div>
+              <p className="text-xs text-muted-foreground mb-0.5">Price</p>
+              <p className="font-bold text-primary text-lg">
+                ${(Number(product.price) / 100).toFixed(2)}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-between pt-2">
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setConfirmDelete(true)}
+              data-ocid="products.detail.delete_button"
+            >
+              <Trash2 className="h-4 w-4 mr-1" /> Delete
+            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onEdit}
+                data-ocid="products.detail.edit_button"
+              >
+                <Pencil className="h-4 w-4 mr-1" /> Edit
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onClose}
+                data-ocid="products.detail.close_button"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent data-ocid="products.delete.dialog">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Product</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{product.name}</strong>?
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-ocid="products.delete.cancel_button">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-ocid="products.delete.confirm_button"
+            >
+              {deleteProduct.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
 export default function ProductsManagement() {
   const { data: products, isLoading } = useGetAllProducts();
   const addProduct = useAddProduct();
   const updateProduct = useUpdateProduct();
-  const deleteProduct = useDeleteProduct();
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [detailProduct, setDetailProduct] = useState<Product | null>(null);
   const [form, setForm] = useState<ProductFormData>(defaultForm);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -79,6 +222,7 @@ export default function ProductsManagement() {
   };
 
   const openEditDialog = (product: Product) => {
+    setDetailProduct(null);
     setEditingProduct(product);
     setForm({
       name: product.name,
@@ -89,11 +233,6 @@ export default function ProductsManagement() {
     });
     setUploadProgress(0);
     setDialogOpen(true);
-  };
-
-  const openDeleteDialog = (id: string) => {
-    setDeletingId(id);
-    setDeleteDialogOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -163,18 +302,6 @@ export default function ProductsManagement() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!deletingId) return;
-    try {
-      await deleteProduct.mutateAsync(deletingId);
-      toast.success("Product deleted");
-      setDeleteDialogOpen(false);
-      setDeletingId(null);
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to delete product");
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -184,15 +311,25 @@ export default function ProductsManagement() {
             {products?.length ?? 0} product
             {(products?.length ?? 0) !== 1 ? "s" : ""}
           </p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Click any product to see full details, edit, or delete
+          </p>
         </div>
-        <Button onClick={openAddDialog} className="gap-2">
+        <Button
+          onClick={openAddDialog}
+          className="gap-2"
+          data-ocid="products.add_button"
+        >
           <Plus className="h-4 w-4" />
           Add Product
         </Button>
       </div>
 
       {isLoading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+          data-ocid="products.loading_state"
+        >
           {["sk1", "sk2", "sk3", "sk4", "sk5", "sk6"].map((sk) => (
             <Card key={sk}>
               <Skeleton className="aspect-video w-full rounded-t-lg" />
@@ -207,7 +344,10 @@ export default function ProductsManagement() {
       )}
 
       {!isLoading && (!products || products.length === 0) && (
-        <div className="text-center py-16 space-y-3">
+        <div
+          className="text-center py-16 space-y-3"
+          data-ocid="products.empty_state"
+        >
           <div className="flex justify-center">
             <div className="p-4 rounded-full bg-muted">
               <Package className="h-10 w-10 text-muted-foreground" />
@@ -220,9 +360,17 @@ export default function ProductsManagement() {
       )}
 
       {!isLoading && products && products.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {products.map((product) => (
-            <Card key={product.id} className="overflow-hidden">
+        <div
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+          data-ocid="products.list"
+        >
+          {products.map((product, idx) => (
+            <Card
+              key={product.id}
+              className="overflow-hidden cursor-pointer hover:shadow-md hover:border-primary/40 transition-all"
+              onClick={() => setDetailProduct(product)}
+              data-ocid={`products.item.${idx + 1}`}
+            >
               <div className="aspect-video overflow-hidden bg-muted">
                 <img
                   src={product.image.getDirectURL()}
@@ -234,42 +382,32 @@ export default function ProductsManagement() {
                   }}
                 />
               </div>
-              <CardContent className="p-4 space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <h3 className="font-semibold text-foreground truncate">
-                      {product.name}
-                    </h3>
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {product.description}
-                    </p>
-                    <p className="text-sm font-bold text-primary mt-1">
-                      ${(Number(product.price) / 100).toFixed(2)}
-                    </p>
-                  </div>
-                  <div className="flex gap-1 shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => openEditDialog(product)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={() => openDeleteDialog(product.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+              <CardContent className="p-4 space-y-1">
+                <h3 className="font-semibold text-foreground truncate">
+                  {product.name}
+                </h3>
+                <p className="text-sm text-muted-foreground line-clamp-2">
+                  {product.description}
+                </p>
+                <p className="text-sm font-bold text-primary">
+                  ${(Number(product.price) / 100).toFixed(2)}
+                </p>
+                <p className="text-xs text-primary/70 pt-0.5">Click to view</p>
               </CardContent>
             </Card>
           ))}
         </div>
+      )}
+
+      {/* Product Detail Modal */}
+      {detailProduct && (
+        <ProductDetailModal
+          product={detailProduct}
+          open={!!detailProduct}
+          onClose={() => setDetailProduct(null)}
+          onEdit={() => openEditDialog(detailProduct)}
+          onDelete={() => setDetailProduct(null)}
+        />
       )}
 
       {/* Add/Edit Dialog */}
@@ -289,6 +427,7 @@ export default function ProductsManagement() {
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 required
+                data-ocid="products.form.name.input"
               />
             </div>
             <div className="space-y-2">
@@ -302,6 +441,7 @@ export default function ProductsManagement() {
                 }
                 rows={3}
                 required
+                data-ocid="products.form.description.textarea"
               />
             </div>
             <div className="space-y-2">
@@ -315,6 +455,7 @@ export default function ProductsManagement() {
                 value={form.price}
                 onChange={(e) => setForm({ ...form, price: e.target.value })}
                 required
+                data-ocid="products.form.price.input"
               />
             </div>
             <div className="space-y-2">
@@ -373,10 +514,15 @@ export default function ProductsManagement() {
                 type="button"
                 variant="outline"
                 onClick={() => setDialogOpen(false)}
+                data-ocid="products.form.cancel_button"
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                data-ocid="products.form.submit_button"
+              >
                 {isSubmitting ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -392,32 +538,6 @@ export default function ProductsManagement() {
           </form>
         </DialogContent>
       </Dialog>
-
-      {/* Delete Confirmation */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Product</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this product? This action cannot
-              be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteProduct.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                "Delete"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

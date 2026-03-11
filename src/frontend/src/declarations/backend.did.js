@@ -132,8 +132,10 @@ export const idlService = IDL.Service({
     ),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
   'assignUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+  'deleteCustomOrder' : IDL.Func([IDL.Text], [], []),
   'deleteGalleryItem' : IDL.Func([IDL.Text], [], []),
   'deleteProduct' : IDL.Func([IDL.Text], [], []),
+  'deleteStoreOrder' : IDL.Func([IDL.Text], [], []),
   'getAllCustomOrders' : IDL.Func([], [IDL.Vec(CustomOrder)], []),
   'getAllGalleryItems' : IDL.Func([], [IDL.Vec(GalleryItem)], ['query']),
   'getAllPaymentConfirmations' : IDL.Func(
@@ -331,8 +333,10 @@ export const idlFactory = ({ IDL }) => {
       ),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
     'assignUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+    'deleteCustomOrder' : IDL.Func([IDL.Text], [], []),
     'deleteGalleryItem' : IDL.Func([IDL.Text], [], []),
     'deleteProduct' : IDL.Func([IDL.Text], [], []),
+    'deleteStoreOrder' : IDL.Func([IDL.Text], [], []),
     'getAllCustomOrders' : IDL.Func([], [IDL.Vec(CustomOrder)], []),
     'getAllGalleryItems' : IDL.Func([], [IDL.Vec(GalleryItem)], ['query']),
     'getAllPaymentConfirmations' : IDL.Func(

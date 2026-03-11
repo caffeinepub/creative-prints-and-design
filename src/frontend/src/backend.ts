@@ -183,8 +183,10 @@ export interface backendInterface {
     addProduct(id: string, name: string, description: string, price: bigint, image: ExternalBlob): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     assignUserRole(user: Principal, role: UserRole): Promise<void>;
+    deleteCustomOrder(id: string): Promise<void>;
     deleteGalleryItem(id: string): Promise<void>;
     deleteProduct(id: string): Promise<void>;
+    deleteStoreOrder(id: string): Promise<void>;
     getAllCustomOrders(): Promise<Array<CustomOrder>>;
     getAllGalleryItems(): Promise<Array<GalleryItem>>;
     getAllPaymentConfirmations(): Promise<Array<PaymentConfirmation>>;
@@ -365,6 +367,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async deleteCustomOrder(arg0: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deleteCustomOrder(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deleteCustomOrder(arg0);
+            return result;
+        }
+    }
     async deleteGalleryItem(arg0: string): Promise<void> {
         if (this.processError) {
             try {
@@ -390,6 +406,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.deleteProduct(arg0);
+            return result;
+        }
+    }
+    async deleteStoreOrder(arg0: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deleteStoreOrder(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deleteStoreOrder(arg0);
             return result;
         }
     }

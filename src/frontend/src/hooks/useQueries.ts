@@ -311,6 +311,20 @@ export function useGetAllCustomOrders() {
   });
 }
 
+export function useDeleteCustomOrder() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const resolvedActor = await waitForAdminActor(queryClient);
+      return resolvedActor.deleteCustomOrder(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customOrders"] });
+    },
+  });
+}
+
 // ===== Store Orders =====
 
 export function useSubmitStoreOrder() {
@@ -380,6 +394,20 @@ export function useUpdateStoreOrderStatus() {
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const resolvedActor = await waitForAdminActor(queryClient);
       return resolvedActor.updateStoreOrderStatus(id, status);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["storeOrders"] });
+    },
+  });
+}
+
+export function useDeleteStoreOrder() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const resolvedActor = await waitForAdminActor(queryClient);
+      return resolvedActor.deleteStoreOrder(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["storeOrders"] });

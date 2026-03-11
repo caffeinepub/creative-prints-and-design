@@ -90,8 +90,10 @@ export interface backendInterface {
     addProduct(id: string, name: string, description: string, price: bigint, image: ExternalBlob): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     assignUserRole(user: Principal, role: UserRole): Promise<void>;
+    deleteCustomOrder(id: string): Promise<void>;
     deleteGalleryItem(id: string): Promise<void>;
     deleteProduct(id: string): Promise<void>;
+    deleteStoreOrder(id: string): Promise<void>;
     getAllCustomOrders(): Promise<Array<CustomOrder>>;
     getAllGalleryItems(): Promise<Array<GalleryItem>>;
     getAllPaymentConfirmations(): Promise<Array<PaymentConfirmation>>;
