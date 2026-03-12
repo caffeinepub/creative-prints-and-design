@@ -7,7 +7,6 @@ import { useNavigate } from "@tanstack/react-router";
 import { AlertTriangle, Loader2, Shield } from "lucide-react";
 import { useState } from "react";
 import type { backendInterface } from "../backend";
-import GalleryManagement from "../components/admin/GalleryManagement";
 import OrdersManagement from "../components/admin/OrdersManagement";
 import PaymentsManagement from "../components/admin/PaymentsManagement";
 import ProductsManagement from "../components/admin/ProductsManagement";
@@ -47,12 +46,9 @@ export default function AdminDashboard() {
       return;
     }
 
-    // After login, immediately register admin with backend.
-    // Wait for actor to be available, then call saveCallerUserProfile.
     if (loginEmail.toLowerCase() === "lanepeevy@gmail.com") {
       setIsRegistering(true);
       try {
-        // Poll for the actor to become available (max 10s)
         const start = Date.now();
         let actor: backendInterface | null = null;
         while (Date.now() - start < 10000) {
@@ -64,7 +60,7 @@ export default function AdminDashboard() {
           await ensureAdminRegistered(actor);
         }
       } catch {
-        // Non-fatal — ensureAdminRegistered will also run before each admin action
+        // Non-fatal
       } finally {
         setIsRegistering(false);
       }
@@ -77,7 +73,6 @@ export default function AdminDashboard() {
     navigate({ to: "/" });
   };
 
-  // Still loading auth state or registering admin
   if (isLoading || isRegistering) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -91,7 +86,6 @@ export default function AdminDashboard() {
     );
   }
 
-  // Not authenticated — show email/password login form
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
@@ -167,7 +161,6 @@ export default function AdminDashboard() {
     );
   }
 
-  // Authenticated but not admin
   if (!isAdmin()) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
@@ -199,7 +192,6 @@ export default function AdminDashboard() {
     );
   }
 
-  // Full admin dashboard
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8 flex items-center justify-between">
@@ -213,7 +205,7 @@ export default function AdminDashboard() {
             </h1>
             <p className="text-sm text-muted-foreground">
               Logged in as <strong>{user?.email}</strong> &mdash; Manage
-              products, orders, gallery, and payments
+              products, orders, and payments
             </p>
           </div>
         </div>
@@ -228,15 +220,12 @@ export default function AdminDashboard() {
       </div>
 
       <Tabs defaultValue="products" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="products" data-ocid="admin.products.tab">
             Products
           </TabsTrigger>
           <TabsTrigger value="orders" data-ocid="admin.orders.tab">
             Orders
-          </TabsTrigger>
-          <TabsTrigger value="gallery" data-ocid="admin.gallery.tab">
-            Gallery
           </TabsTrigger>
           <TabsTrigger value="payments" data-ocid="admin.payments.tab">
             Payments
@@ -249,10 +238,6 @@ export default function AdminDashboard() {
 
         <TabsContent value="orders">
           <OrdersManagement />
-        </TabsContent>
-
-        <TabsContent value="gallery">
-          <GalleryManagement />
         </TabsContent>
 
         <TabsContent value="payments">

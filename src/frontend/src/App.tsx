@@ -6,14 +6,12 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
-  redirect,
 } from "@tanstack/react-router";
 import { ThemeProvider } from "next-themes";
 import Layout from "./components/Layout";
 import AdminDashboard from "./pages/AdminDashboard";
 import CheckoutPage from "./pages/CheckoutPage";
 import CustomOrderPage from "./pages/CustomOrderPage";
-import GalleryPage from "./pages/GalleryPage";
 import HomePage from "./pages/HomePage";
 import OrderSuccessPage from "./pages/OrderSuccessPage";
 import StorePage from "./pages/StorePage";
@@ -45,12 +43,6 @@ const storeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/store",
   component: StorePage,
-});
-
-const galleryRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/gallery",
-  component: GalleryPage,
 });
 
 const customOrderRoute = createRoute({
@@ -85,7 +77,6 @@ const adminRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   homeRoute,
   storeRoute,
-  galleryRoute,
   customOrderRoute,
   checkoutRoute,
   orderSuccessRoute,

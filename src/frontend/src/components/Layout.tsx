@@ -6,7 +6,6 @@ import { Menu, Shield, ShoppingCart, X } from "lucide-react";
 import { useState } from "react";
 import { computeTotalItems, useCart } from "../hooks/useCart";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
-import { useIsCallerAdmin } from "../hooks/useQueries";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -23,8 +22,6 @@ export default function Layout({ children }: LayoutProps) {
 
   const isAuthenticated = !!identity;
   const isLoggingIn = loginStatus === "logging-in";
-
-  const { data: isAdmin } = useIsCallerAdmin();
 
   const handleLogin = async () => {
     if (isAuthenticated) {
@@ -46,7 +43,6 @@ export default function Layout({ children }: LayoutProps) {
   const navLinks = [
     { to: "/", label: "Home" },
     { to: "/store", label: "Store" },
-    { to: "/gallery", label: "Gallery" },
     { to: "/custom-order", label: "Custom Order" },
   ];
 
@@ -81,28 +77,15 @@ export default function Layout({ children }: LayoutProps) {
                   {link.label}
                 </Link>
               ))}
-              {/* Admin link shown when logged in as admin OR always visible as a door to admin login */}
-              {isAuthenticated && isAdmin ? (
-                <Link
-                  to="/admin"
-                  className="px-3 py-2 rounded-md text-sm font-medium text-foreground/80 hover:text-primary hover:bg-primary/10 transition-colors flex items-center gap-1"
-                  activeProps={{ className: "text-primary bg-primary/10" }}
-                  data-ocid="nav.admin.link"
-                >
-                  <Shield className="h-3.5 w-3.5" />
-                  Admin
-                </Link>
-              ) : (
-                <Link
-                  to="/admin"
-                  className="px-3 py-2 rounded-md text-sm font-medium text-foreground/80 hover:text-primary hover:bg-primary/10 transition-colors flex items-center gap-1"
-                  activeProps={{ className: "text-primary bg-primary/10" }}
-                  data-ocid="nav.admin.link"
-                >
-                  <Shield className="h-3.5 w-3.5" />
-                  Admin
-                </Link>
-              )}
+              <Link
+                to="/admin"
+                className="px-3 py-2 rounded-md text-sm font-medium text-foreground/80 hover:text-primary hover:bg-primary/10 transition-colors flex items-center gap-1"
+                activeProps={{ className: "text-primary bg-primary/10" }}
+                data-ocid="nav.admin.link"
+              >
+                <Shield className="h-3.5 w-3.5" />
+                Admin
+              </Link>
             </nav>
 
             {/* Right side actions */}

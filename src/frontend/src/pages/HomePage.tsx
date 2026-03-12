@@ -133,49 +133,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Gallery Preview CTA */}
-      <section className="py-16 bg-card border-y border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                "/assets/generated/sample-dragon-figurine.dim_400x400.jpg",
-                "/assets/generated/sample-gear-assembly.dim_400x400.jpg",
-                "/assets/generated/sample-phone-case.dim_400x400.jpg",
-                "/assets/generated/sample-jewelry.dim_400x400.jpg",
-                "/assets/generated/sample-architecture-model.dim_400x400.jpg",
-                "/assets/generated/sample-prototype.dim_400x400.jpg",
-              ].map((src, i) => (
-                <div
-                  key={src}
-                  className="aspect-square rounded-lg overflow-hidden"
-                >
-                  <img
-                    src={src}
-                    alt={`Sample print ${i + 1}`}
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="space-y-4">
-              <h2 className="text-3xl font-bold text-foreground">
-                See Our Work
-              </h2>
-              <p className="text-muted-foreground">
-                Browse our gallery of completed projects — from intricate
-                figurines to functional prototypes and everything in between.
-              </p>
-              <Button asChild variant="outline" className="gap-2">
-                <Link to="/gallery">
-                  View Full Gallery <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* CTA Section */}
       <section className="py-16 md:py-24 bg-primary text-primary-foreground">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
